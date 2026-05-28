@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { setHasOnboarded, setUserPath } from '../services/storage';
-import { colors, fonts, spacing, radius } from '../theme';
+import { sharedStyles } from '../styles/shared';
+import { Feather } from '@expo/vector-icons';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
 
 const QUESTIONS = [
-  {
-    id: 'q1',
-    text: 'How often do you get migraines each month?',
-    options: [
-      { value: 'low', label: 'Fewer than 4 days per month' },
-      { value: 'mid', label: '4 to 8 days per month' },
-      { value: 'high', label: 'More than 8 days per month' },
-    ],
-  },
   {
     id: 'q2',
     text: 'Are you currently on any preventive migraine treatment?',
@@ -22,15 +16,6 @@ const QUESTIONS = [
       { value: 'yes', label: 'Yes, I take a regular preventive medication' },
       { value: 'no', label: 'No, I only treat migraines when they happen' },
       { value: 'unsure', label: "I'm not sure" },
-    ],
-  },
-  {
-    id: 'q3',
-    text: 'How satisfied are you with how your migraines are managed right now?',
-    options: [
-      { value: 'satisfied', label: 'Very satisfied: my migraines are well controlled' },
-      { value: 'somewhat', label: 'Somewhat satisfied, with room for improvement' },
-      { value: 'unsatisfied', label: 'Not satisfied. Still disrupting my life.' },
     ],
   },
 ];
@@ -62,8 +47,11 @@ export default function QuizScreen({ navigation }) {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         {step > 0 && (
-          <TouchableOpacity onPress={() => setStep(step - 1)} style={styles.back}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity onPress={() => setStep(step - 1)} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back to previous question">
+            <View style={sharedStyles.backRow}>
+              <Feather name="arrow-left" size={16} color={colors.slateMid} />
+              <Text style={styles.backText}>Back</Text>
+            </View>
           </TouchableOpacity>
         )}
         <View style={styles.progressBar}>
@@ -81,6 +69,9 @@ export default function QuizScreen({ navigation }) {
               style={[styles.option, selected === opt.value && styles.optionSelected]}
               onPress={() => pick(opt.value)}
               activeOpacity={0.85}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selected === opt.value }}
+              accessibilityLabel={opt.label}
             >
               <View style={[styles.radio, selected === opt.value && styles.radioSelected]}>
                 {selected === opt.value && <View style={styles.radioDot} />}
@@ -111,24 +102,24 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.white },
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   back: { marginBottom: spacing.md },
-  backText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid },
+  backText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
   progressBar: {
     height: 4, backgroundColor: colors.creamMid, borderRadius: radius.full, marginBottom: 6,
   },
   progressFill: {
     height: '100%', backgroundColor: colors.lav, borderRadius: radius.full,
   },
-  stepLabel: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.slateLight, textAlign: 'right' },
+  stepLabel: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.slateLight, textAlign: 'right' },
   body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   question: {
-    fontFamily: fonts.display, fontSize: 30, lineHeight: 38,
+    fontFamily: fonts.display, fontSize: textSize.displayMd, lineHeight: 38,
     color: colors.slate, marginBottom: spacing.xl,
   },
   options: { gap: 11, paddingBottom: spacing.lg },
   option: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     padding: 17, borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: 15, backgroundColor: 'white',
+    borderRadius: 15, backgroundColor: colors.white,
   },
   optionSelected: { borderColor: colors.lav, backgroundColor: colors.lavPale },
   radio: {
@@ -136,13 +127,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
   },
   radioSelected: { borderColor: colors.lav, backgroundColor: colors.lav },
-  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'white' },
-  optionText: { fontFamily: fonts.body, fontSize: 17, color: colors.slate, flex: 1 },
+  radioDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.white },
+  optionText: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slate, flex: 1 },
   footer: { paddingHorizontal: spacing.lg, paddingBottom: 32, paddingTop: spacing.sm },
   btn: {
     backgroundColor: colors.lav, borderRadius: 16,
     paddingVertical: 17, alignItems: 'center',
   },
   btnDisabled: { opacity: 0.35 },
-  btnText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: 'white' },
+  btnText: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
 });

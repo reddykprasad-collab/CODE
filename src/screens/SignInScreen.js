@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { getHasOnboarded } from '../services/storage';
-import { colors, fonts, spacing, radius } from '../theme';
+import { sharedStyles } from '../styles/shared';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
 
 export default function SignInScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -33,14 +35,15 @@ export default function SignInScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.root}>
-      <LinearGradient colors={['rgba(142,125,196,0.12)', 'transparent']} style={styles.blob} />
-
       <KeyboardAvoidingView
         style={styles.inner}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
+          <View style={sharedStyles.backRow}>
+            <Feather name="arrow-left" size={16} color={colors.slateMid} />
+            <Text style={styles.backText}>Back</Text>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.top}>
@@ -97,34 +100,30 @@ export default function SignInScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
-  blob: {
-    position: 'absolute', width: 340, height: 340,
-    top: -80, right: -100, borderRadius: 170,
-  },
   inner: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: 32 },
   back: { paddingTop: spacing.md, marginBottom: spacing.xl },
-  backText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid },
+  backText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
   top: { marginBottom: spacing.xl },
   mark: {
     width: 48, height: 48, backgroundColor: colors.lav, borderRadius: 14,
     marginBottom: spacing.lg, alignItems: 'center', justifyContent: 'center',
   },
-  markText: { color: 'white', fontSize: 22 },
-  title: { fontFamily: fonts.display, fontSize: 36, color: colors.slate, marginBottom: 10, lineHeight: 42 },
-  subtitle: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid, lineHeight: 24 },
+  markText: { color: colors.white, fontSize: textSize.heading },
+  title: { fontFamily: fonts.display, fontSize: textSize.displayXl, color: colors.slate, marginBottom: 10, lineHeight: 42 },
+  subtitle: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid, lineHeight: 24 },
   form: { flex: 1 },
   label: {
-    fontFamily: fonts.bodySemiBold, fontSize: 13, letterSpacing: 1.2,
-    textTransform: 'uppercase', color: colors.slateLight, marginBottom: 10,
+    fontFamily: fonts.bodySemiBold, fontSize: textSize.label,
+    color: colors.slateLight, marginBottom: 10,
   },
   input: {
-    backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.border,
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 15,
-    fontFamily: fonts.body, fontSize: 17, color: colors.slate, marginBottom: 16,
+    fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slate, marginBottom: 16,
   },
   inputError: { borderColor: colors.terra, backgroundColor: colors.terraPale },
   errorText: {
-    fontFamily: fonts.body, fontSize: 15, color: colors.terra,
+    fontFamily: fonts.body, fontSize: textSize.body, color: colors.terra,
     lineHeight: 22, marginBottom: 16, marginTop: -8,
   },
   btn: {
@@ -132,12 +131,12 @@ const styles = StyleSheet.create({
     paddingVertical: 17, alignItems: 'center', marginBottom: spacing.md,
   },
   btnDisabled: { opacity: 0.35 },
-  btnText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: 'white' },
+  btnText: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
   switchBtn: { alignItems: 'center', paddingVertical: 10 },
-  switchText: { fontFamily: fonts.body, fontSize: 15, color: colors.slateMid },
+  switchText: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid },
   switchLink: { fontFamily: fonts.bodyMedium, color: colors.lav },
   legalNote: {
-    fontFamily: fonts.body, fontSize: 14, color: colors.slateLight,
+    fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateLight,
     textAlign: 'center', lineHeight: 20, paddingBottom: 8,
   },
 });

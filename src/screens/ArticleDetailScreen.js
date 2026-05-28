@@ -1,8 +1,11 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { colors, fonts, spacing, radius } from '../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
+import { sharedStyles } from '../styles/shared';
 
 const ARTICLES = {
   'cgrp-education': {
@@ -89,6 +92,62 @@ const ARTICLES = {
       },
     ],
   },
+  'stress-triggers': {
+    title: 'How stress triggers migraines — and what you can do about it',
+    category: 'Triggers',
+    readTime: '4 min',
+    icon: '🧘',
+    sections: [
+      {
+        heading: 'Why stress and migraines are linked',
+        body: 'Stress activates your nervous system and causes the release of chemicals that can trigger cortical spreading depression — the wave of electrical activity that precedes a migraine. It also raises levels of CGRP, the same protein that CGRP-targeting medications are designed to block. The connection is direct, not just correlation.',
+      },
+      {
+        heading: 'The letdown effect',
+        body: 'One pattern that surprises many people: migraines often strike not during peak stress, but right after it lifts. Weekend migraines, holiday migraines, and migraines after a stressful project ends follow this pattern. The drop in stress hormones after sustained tension can be a more reliable trigger than the stress itself. If this sounds familiar, your logs may confirm it.',
+      },
+      {
+        heading: 'What the research says about stress reduction',
+        body: 'Cognitive behavioral therapy (CBT) and biofeedback have the strongest evidence for reducing stress-related migraine frequency. Regular aerobic exercise also helps — not just for general stress, but specifically for migraine prevention. These are not replacements for medication, but they work alongside it. Your doctor can refer you to a headache specialist or behavioral medicine provider if you want structured support.',
+      },
+      {
+        heading: 'Practical things worth tracking',
+        body: 'When you log a stress-triggered migraine, note what kind of stress it was. Work deadlines, sleep disruption from anxiety, and interpersonal conflict may have different patterns and different leverage points. The more specific your log, the clearer the pattern becomes over time and the more useful that data is for both you and your doctor.',
+      },
+      {
+        heading: 'When stress reduction is not enough',
+        body: 'If stress is a consistent trigger and lifestyle changes have not materially reduced your migraine frequency, that is a signal for a conversation about preventive medication. Managing a trigger reduces exposure; preventive treatment raises the threshold for attacks to begin. Both levers are worth using.',
+      },
+    ],
+  },
+  'sleep-migraines': {
+    title: 'The connection between sleep and migraine frequency',
+    category: 'Triggers',
+    readTime: '4 min',
+    icon: '🌙',
+    sections: [
+      {
+        heading: 'Sleep disruption is one of the most common triggers',
+        body: 'Poor sleep appears in migraine logs more reliably than almost any other factor. Both too little sleep and too much sleep can trigger attacks. The mechanism involves changes in serotonin and dopamine levels and disruption of the hypothalamus, which plays a central role in migraine generation. The relationship is not incidental.',
+      },
+      {
+        heading: 'Why consistency matters more than duration',
+        body: 'Research on sleep and migraines consistently shows that irregular sleep schedules — even with adequate total hours — are a stronger trigger than simply sleeping less. Waking at the same time every day (including weekends) is one of the most evidence-backed behavioral interventions for migraine reduction. This is harder to do than it sounds, but the payoff in migraine frequency is measurable.',
+      },
+      {
+        heading: 'Insomnia and migraines create a feedback loop',
+        body: 'Pain disrupts sleep. Poor sleep lowers the pain threshold and makes the next migraine more likely. Many people with frequent migraines also have insomnia, and treating one often helps the other. If you are experiencing both, it is worth mentioning to your doctor — there are treatment approaches that address both together.',
+      },
+      {
+        heading: 'What to log',
+        body: 'When you record a migraine day in your journal, also note when you went to bed and when you woke up, even roughly. After a few weeks, patterns become visible: late nights before migraine days, early wake-ups, irregular schedules. Your logs become a diagnostic tool your doctor can act on.',
+      },
+      {
+        heading: 'Sleep hygiene in the context of migraines',
+        body: 'Standard sleep hygiene recommendations (consistent schedule, dark and cool room, no screens before bed, limited caffeine after noon) are especially relevant for migraine sufferers. Caffeine changes are themselves a trigger — both too much and abrupt reduction. If you use caffeine to manage morning migraines, that pattern is worth discussing with your doctor.',
+      },
+    ],
+  },
 };
 
 export default function ArticleDetailScreen({ route, navigation }) {
@@ -99,13 +158,16 @@ export default function ArticleDetailScreen({ route, navigation }) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
+            <View style={sharedStyles.backRow}>
+              <Feather name="arrow-left" size={16} color={colors.slateMid} />
+              <Text style={styles.backText}>Back</Text>
+            </View>
           </TouchableOpacity>
         </View>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-          <Text style={{ fontFamily: fonts.display, fontSize: 22, color: colors.slate, marginBottom: 10 }}>Article not found</Text>
-          <Text style={{ fontFamily: fonts.body, fontSize: 16, color: colors.slateMid, textAlign: 'center' }}>This article is no longer available.</Text>
+          <Text style={{ fontFamily: fonts.display, fontSize: textSize.heading, color: colors.slate, marginBottom: 10 }}>Article not found</Text>
+          <Text style={{ fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid, textAlign: 'center' }}>This article is no longer available.</Text>
         </View>
       </SafeAreaView>
     );
@@ -114,8 +176,11 @@ export default function ArticleDetailScreen({ route, navigation }) {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
+          <View style={sharedStyles.backRow}>
+            <Feather name="arrow-left" size={16} color={colors.slateMid} />
+            <Text style={styles.backText}>Back</Text>
+          </View>
         </TouchableOpacity>
         <View style={styles.meta}>
           <Text style={styles.category}>{article.category}</Text>
@@ -156,30 +221,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   back: { marginBottom: 10 },
-  backText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid },
+  backText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  category: { fontFamily: fonts.bodySemiBold, fontSize: 17, color: colors.lav, letterSpacing: 1 },
+  category: { fontFamily: fonts.bodySemiBold, fontSize: textSize.caption, color: colors.lav, letterSpacing: 0.8 },
   dot: { color: colors.slateLight },
-  readTime: { fontFamily: fonts.body, fontSize: 17, color: colors.slateLight },
+  readTime: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slateLight },
   scroll: { flex: 1 },
   body: { padding: spacing.lg },
   iconWrap: {
     width: 56, height: 56, borderRadius: 16, backgroundColor: colors.lavPale,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
   },
-  icon: { fontSize: 26 },
+  icon: { fontSize: textSize.headingLg },
   title: {
-    fontFamily: fonts.display, fontSize: 28, color: colors.slate,
+    fontFamily: fonts.display, fontSize: textSize.display, color: colors.slate,
     lineHeight: 36, marginBottom: spacing.xl,
   },
   section: { marginBottom: spacing.lg },
   sectionHeading: {
-    fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.slate, marginBottom: 8,
+    fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.slate, marginBottom: 8,
   },
-  sectionBody: { fontFamily: fonts.body, fontSize: 17, color: colors.slateMid, lineHeight: 24 },
+  sectionBody: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slateMid, lineHeight: 24 },
   disclaimer: {
-    backgroundColor: colors.terraPale, borderRadius: 12,
+    backgroundColor: colors.creamMid, borderRadius: 12,
     padding: spacing.md, marginTop: spacing.lg,
   },
-  disclaimerText: { fontFamily: fonts.body, fontSize: 16, color: colors.terra, lineHeight: 22 },
+  disclaimerText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateLight, lineHeight: 22 },
 });

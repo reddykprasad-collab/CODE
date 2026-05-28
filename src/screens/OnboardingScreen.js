@@ -1,21 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, spacing, radius } from '../theme';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
 
 export default function OnboardingScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.root}>
-      {/* ambient blobs via gradients */}
-      <LinearGradient
-        colors={['rgba(142,125,196,0.25)', 'transparent']}
-        style={styles.blob1}
-      />
-      <LinearGradient
-        colors={['rgba(107,158,147,0.2)', 'transparent']}
-        style={styles.blob2}
-      />
-
       <View style={styles.content}>
         {/* top section */}
         <View style={styles.top}>
@@ -46,13 +36,27 @@ export default function OnboardingScreen({ navigation }) {
             style={styles.btnPrimary}
             onPress={() => navigation.navigate('Quiz')}
             activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="Get started"
           >
             <Text style={styles.btnPrimaryText}>Get started</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnGhost} onPress={() => navigation.navigate('SignIn')} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.btnGhost}
+            onPress={() => navigation.navigate('SignIn')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to existing account"
+          >
             <Text style={styles.btnGhostText}>I already have an account</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')} activeOpacity={0.7} style={styles.privacyLink}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+            activeOpacity={0.7}
+            style={styles.privacyLink}
+            accessibilityRole="link"
+            accessibilityLabel="View privacy policy"
+          >
             <Text style={styles.privacyLinkText}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
@@ -63,32 +67,24 @@ export default function OnboardingScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
-  blob1: {
-    position: 'absolute', width: 340, height: 340,
-    top: -100, right: -110, borderRadius: 170,
-  },
-  blob2: {
-    position: 'absolute', width: 300, height: 300,
-    bottom: 60, left: -100, borderRadius: 150,
-  },
   content: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: 44 },
   top: { flex: 1, justifyContent: 'center' },
   mark: {
     width: 52, height: 52, backgroundColor: colors.lav, borderRadius: 16,
     marginBottom: 44, alignItems: 'center', justifyContent: 'center',
   },
-  markText: { color: 'white', fontSize: 26 },
+  markText: { color: colors.white, fontSize: textSize.headingLg },
   eyebrow: {
-    fontFamily: fonts.bodySemiBold, fontSize: 17, letterSpacing: 2,
-    color: colors.lav, textTransform: 'uppercase', marginBottom: 14,
+    fontFamily: fonts.bodySemiBold, fontSize: textSize.label,
+    color: colors.lav, marginBottom: 14,
   },
   headline: {
-    fontFamily: fonts.display, fontSize: 50, lineHeight: 55,
+    fontFamily: fonts.display, fontSize: textSize.hero, lineHeight: 55,
     color: colors.slate, marginBottom: 20,
   },
   headlineItalic: { fontFamily: fonts.displayItalic, color: colors.lav },
   desc: {
-    fontFamily: fonts.body, fontSize: 16, lineHeight: 26,
+    fontFamily: fonts.body, fontSize: textSize.base, lineHeight: 26,
     color: colors.slateMid,
   },
   bottom: { gap: spacing.sm },
@@ -97,14 +93,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lavPale, borderRadius: radius.full,
     paddingHorizontal: 13, paddingVertical: 6,
   },
-  pillText: { fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.lav },
+  pillText: { fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.lav },
   btnPrimary: {
     backgroundColor: colors.lav, borderRadius: 16,
     paddingVertical: 17, alignItems: 'center',
   },
-  btnPrimaryText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: 'white' },
+  btnPrimaryText: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
   btnGhost: { paddingVertical: 12, alignItems: 'center' },
-  btnGhostText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid },
+  btnGhostText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
   privacyLink: { paddingVertical: 4, alignItems: 'center' },
-  privacyLinkText: { fontFamily: fonts.body, fontSize: 14, color: colors.slateLight, textDecorationLine: 'underline' },
+  privacyLinkText: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateLight, textDecorationLine: 'underline' },
 });

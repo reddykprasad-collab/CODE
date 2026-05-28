@@ -1,8 +1,11 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
-import { colors, fonts, spacing } from '../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { colors, fonts, spacing, textSize } from '../theme';
+import { sharedStyles } from '../styles/shared';
 
 const SECTIONS = [
   {
@@ -44,8 +47,11 @@ export default function PrivacyPolicyScreen({ navigation }) {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         {navigation && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
+            <View style={sharedStyles.backRow}>
+              <Feather name="arrow-left" size={16} color={colors.slateMid} />
+              <Text style={styles.backText}>Back</Text>
+            </View>
           </TouchableOpacity>
         )}
         <Text style={styles.title}>Privacy Policy</Text>
@@ -79,9 +85,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   back: { marginBottom: 10 },
-  backText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateMid },
-  title: { fontFamily: fonts.display, fontSize: 26, color: colors.slate, marginBottom: 4 },
-  date: { fontFamily: fonts.body, fontSize: 15, color: colors.slateLight },
+  backText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
+  title: { fontFamily: fonts.display, fontSize: textSize.headingLg, color: colors.slate, marginBottom: 4 },
+  date: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateLight },
   scroll: { flex: 1 },
   body: { padding: spacing.lg },
   leadCard: {
@@ -89,13 +95,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.lavLight, marginBottom: spacing.lg,
   },
   leadText: {
-    fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.lav, lineHeight: 24,
+    fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.lav, lineHeight: 24,
   },
   section: { marginBottom: spacing.lg },
   sectionHeading: {
-    fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.slate, marginBottom: 8,
+    fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.slate, marginBottom: 8,
   },
   sectionBody: {
-    fontFamily: fonts.body, fontSize: 16, color: colors.slateMid, lineHeight: 24,
+    fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid, lineHeight: 24,
   },
 });

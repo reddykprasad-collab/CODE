@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { requestPermissions } from '../services/notifications';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
 
 const BENEFITS = [
   { icon: '💊', text: 'Dose reminders at the time you choose' },
@@ -30,7 +31,7 @@ export default function NotificationPermissionScreen({ navigation }) {
     <SafeAreaView style={styles.root}>
       <View style={styles.body}>
         <LinearGradient
-          colors={[colors.lav, '#6B5FAA']}
+          colors={[colors.lav, colors.lavDark]}
           style={styles.iconWrap}
         >
           <Text style={styles.icon}>🔔</Text>
@@ -45,7 +46,7 @@ export default function NotificationPermissionScreen({ navigation }) {
           {BENEFITS.map((b, i) => (
             <View key={i} style={styles.benefitRow}>
               <View style={styles.benefitIcon}>
-                <Text style={{ fontSize: 18 }}>{b.icon}</Text>
+                <Text style={{ fontSize: textSize.icon }}>{b.icon}</Text>
               </View>
               <Text style={styles.benefitText}>{b.text}</Text>
             </View>
@@ -87,13 +88,13 @@ const styles = StyleSheet.create({
     width: 80, height: 80, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg,
   },
-  icon: { fontSize: 36 },
+  icon: { fontSize: textSize.displayXl },
   title: {
-    fontFamily: fonts.display, fontSize: 28, color: colors.slate,
+    fontFamily: fonts.display, fontSize: textSize.display, color: colors.slate,
     textAlign: 'center', lineHeight: 36, marginBottom: 12,
   },
   subtitle: {
-    fontFamily: fonts.body, fontSize: 17, color: colors.slateMid,
+    fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slateMid,
     textAlign: 'center', lineHeight: 24, marginBottom: spacing.xl,
   },
   benefitList: { width: '100%', gap: 12, marginBottom: spacing.lg },
@@ -105,16 +106,16 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: colors.lavPale, alignItems: 'center', justifyContent: 'center',
   },
-  benefitText: { fontFamily: fonts.body, fontSize: 16, color: colors.slate, flex: 1, lineHeight: 22 },
+  benefitText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slate, flex: 1, lineHeight: 22 },
   noteCard: {
     backgroundColor: colors.creamMid, borderRadius: 12, padding: 14, width: '100%',
   },
-  noteText: { fontFamily: fonts.body, fontSize: 15, color: colors.slateMid, lineHeight: 20, textAlign: 'center' },
+  noteText: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid, lineHeight: 20, textAlign: 'center' },
   footer: { paddingHorizontal: spacing.lg, paddingBottom: 32, gap: 8 },
   allowBtn: {
     backgroundColor: colors.lav, borderRadius: 16, paddingVertical: 17, alignItems: 'center',
   },
-  allowBtnText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: 'white' },
+  allowBtnText: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
   skipBtn: { paddingVertical: 12, alignItems: 'center' },
-  skipBtnText: { fontFamily: fonts.body, fontSize: 16, color: colors.slateLight },
+  skipBtnText: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateLight },
 });

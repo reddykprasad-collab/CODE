@@ -1,111 +1,198 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
-import { useUserPath } from '../contexts/UserPathContext';
-import { colors, fonts, spacing, radius } from '../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { getTreatmentStartDate, setTreatmentStartDate } from '../services/storage';
+import { colors, fonts, spacing, radius, textSize } from '../theme';
 
 const TOOLS = [
   {
-    icon: '❓',
+    icon: 'help-circle',
     label: 'Candidacy Assessment',
     desc: 'Answer 5 questions to see if preventive therapy may be right for you.',
+    detail: '5 questions · 2 min',
+    accent: colors.lav,
     bg: colors.lavPale,
+    border: colors.lavLight,
     route: 'Assessment',
   },
   {
-    icon: '📋',
+    icon: 'clipboard',
     label: 'HCP Prep',
-    desc: 'Build a shareable summary of your migraine history for your doctor.',
+    desc: 'Build a one-page summary of your migraine history, ready to hand to your doctor.',
+    detail: 'Based on your journal data',
+    accent: colors.sage,
     bg: colors.sagePale,
+    border: colors.sageBorder,
     route: 'HCPPrep',
   },
   {
-    icon: '📈',
+    icon: 'trending-up',
     label: 'My Trends',
-    desc: 'View your migraine patterns, triggers, and day-of-week breakdown.',
+    desc: 'View your 28-day pattern, top triggers, day-of-week breakdown, and treatment progress.',
+    detail: 'Updated from your journal',
+    accent: colors.lav,
     bg: colors.lavPale,
+    border: colors.lavLight,
     route: 'Trends',
   },
-];
-
-const PERSONAS = [
   {
-    key: 'awareness',
-    name: 'Alex',
-    role: 'Awareness path',
-    desc: 'Newly diagnosed, exploring options',
-    icon: '🔍',
-  },
-  {
-    key: 'adherence',
-    name: 'Jordan',
-    role: 'Adherence path',
-    desc: 'On treatment, tracking adherence',
-    icon: '💊',
+    icon: 'activity',
+    label: 'MIDAS Check-In',
+    desc: 'A 5-question validated scale that measures how much migraines are affecting your daily life. Run monthly.',
+    detail: '5 questions · 2 min',
+    accent: colors.terra,
+    bg: colors.terraPale,
+    border: colors.terraBorder,
+    route: 'Midas',
   },
 ];
 
 export default function ToolsScreen({ navigation }) {
-  const { userPath, setUserPath } = useUserPath();
+  const [treatmentStart, setTreatmentStart] = useState(null);
+  const [editingDate, setEditingDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState(new Date());
+
+  useFocusEffect(
+    useCallback(() => {
+      getTreatmentStartDate().then(setTreatmentStart);
+    }, [])
+  );
+
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+
+  function adjustMonth(delta) {
+    let m = dateDraft.getMonth() + delta, y = dateDraft.getFullYear();
+    if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
+    const target = new Date(y, m, 1);
+    if (target > now) return;
+    setDateDraft(new Date(y, m, Math.min(dateDraft.getDate(), new Date(y, m + 1, 0).getDate())));
+  }
+  function adjustDay(delta) {
+    const maxDay = new Date(dateDraft.getFullYear(), dateDraft.getMonth() + 1, 0).getDate();
+    const d = new Date(dateDraft.getFullYear(), dateDraft.getMonth(), Math.max(1, Math.min(maxDay, dateDraft.getDate() + delta)));
+    if (d > now) return;
+    setDateDraft(d);
+  }
+  function adjustYear(delta) {
+    const y = dateDraft.getFullYear() + delta;
+    if (y < now.getFullYear() - 3 || y > now.getFullYear()) return;
+    const d = new Date(y, dateDraft.getMonth(), Math.min(dateDraft.getDate(), new Date(y, dateDraft.getMonth() + 1, 0).getDate()));
+    if (d > now) return;
+    setDateDraft(d);
+  }
+  async function saveDateDraft() {
+    await setTreatmentStartDate(dateDraft.toISOString());
+    setTreatmentStart(dateDraft.toISOString());
+    setEditingDate(false);
+  }
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.title}>Tools</Text>
-        <Text style={styles.subtitle}>Everything you need to prepare and track.</Text>
+        <Text style={styles.subtitle}>Understand your patterns and prepare for appointments.</Text>
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
-        {TOOLS.map((tool) => (
+        {TOOLS.map(tool => (
           <TouchableOpacity
             key={tool.route}
             style={styles.toolCard}
             onPress={() => navigation.navigate(tool.route)}
-            activeOpacity={0.85}
+            activeOpacity={0.84}
+            accessibilityRole="button"
+            accessibilityLabel={tool.label}
           >
-            <View style={[styles.toolIcon, { backgroundColor: tool.bg }]}>
-              <Text style={{ fontSize: 22 }}>{tool.icon}</Text>
+            <View style={styles.toolTop}>
+              <View style={[styles.toolIconWrap, { backgroundColor: tool.bg }]}>
+                <Feather name={tool.icon} size={22} color={tool.accent} />
+              </View>
+              <View style={styles.toolDetailPill}>
+                <Text style={[styles.toolDetailTxt, { color: tool.accent }]}>{tool.detail}</Text>
+              </View>
             </View>
-            <View style={styles.toolText}>
-              <Text style={styles.toolLabel}>{tool.label}</Text>
-              <Text style={styles.toolDesc}>{tool.desc}</Text>
+            <Text style={styles.toolLabel}>{tool.label}</Text>
+            <Text style={styles.toolDesc}>{tool.desc}</Text>
+            <View style={styles.toolFooter}>
+              <Text style={[styles.toolCta, { color: tool.accent }]}>Open</Text>
+              <Feather name="arrow-right" size={15} color={tool.accent} />
             </View>
-            <Text style={styles.toolChevron}>›</Text>
           </TouchableOpacity>
         ))}
 
-        <View style={styles.divider} />
+        {/* Treatment settings */}
+        <Text style={styles.settingsSectionLabel}>Settings</Text>
+        <TouchableOpacity
+          style={styles.settingsCard}
+          onPress={() => {
+            if (treatmentStart) setDateDraft(new Date(treatmentStart));
+            setEditingDate(e => !e);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Set treatment start date"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingsCardTitle}>Treatment start date</Text>
+            <Text style={styles.settingsCardValue}>
+              {treatmentStart
+                ? new Date(treatmentStart).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                : 'Not set'}
+            </Text>
+          </View>
+          <Feather name={editingDate ? 'chevron-up' : 'edit-2'} size={15} color={colors.lav} />
+        </TouchableOpacity>
 
-        <Text style={styles.sectionLabel}>Demo: switch view</Text>
-        <Text style={styles.sectionSub}>Tap a persona to see the full experience for each path.</Text>
-
-        <View style={styles.personaRow}>
-          {PERSONAS.map((p) => {
-            const active = userPath === p.key;
-            return (
-              <TouchableOpacity
-                key={p.key}
-                style={[styles.personaCard, active && styles.personaCardActive]}
-                onPress={() => setUserPath(p.key)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.personaIcon}>{p.icon}</Text>
-                <Text style={[styles.personaName, active && styles.personaNameActive]}>{p.name}</Text>
-                <Text style={[styles.personaRole, active && styles.personaRoleActive]}>{p.role}</Text>
-                <Text style={styles.personaDesc}>{p.desc}</Text>
-                {active && <View style={styles.activePip} />}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {editingDate && (
+          <View style={styles.datePickerCard}>
+            <View style={styles.datePicker}>
+              {[
+                { label: 'Month', val: MONTHS_SHORT[dateDraft.getMonth()], up: () => adjustMonth(1), dn: () => adjustMonth(-1) },
+                { label: 'Day',   val: String(dateDraft.getDate()).padStart(2,'0'), up: () => adjustDay(1),   dn: () => adjustDay(-1) },
+                { label: 'Year',  val: dateDraft.getFullYear(), up: () => adjustYear(1),  dn: () => adjustYear(-1) },
+              ].map((col, i) => (
+                <React.Fragment key={col.label}>
+                  {i > 0 && <Text style={styles.dateSep}>/</Text>}
+                  <View style={styles.dateCol}>
+                    <TouchableOpacity onPress={col.up} style={styles.dateArrow} accessibilityRole="button" accessibilityLabel={`Increase ${col.label}`}>
+                      <Feather name="chevron-up" size={18} color={colors.lav} />
+                    </TouchableOpacity>
+                    <Text style={styles.dateVal}>{col.val}</Text>
+                    <TouchableOpacity onPress={col.dn} style={styles.dateArrow} accessibilityRole="button" accessibilityLabel={`Decrease ${col.label}`}>
+                      <Feather name="chevron-down" size={18} color={colors.lav} />
+                    </TouchableOpacity>
+                  </View>
+                </React.Fragment>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.setDateBtn} onPress={saveDateDraft} activeOpacity={0.88} accessibilityRole="button" accessibilityLabel="Save treatment start date">
+              <Text style={styles.setDateTxt}>Save date</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity
           onPress={() => navigation.navigate('PrivacyPolicy')}
           style={styles.privacyLink}
           activeOpacity={0.7}
+          accessibilityRole="link"
+          accessibilityLabel="View privacy policy"
         >
-          <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          <Text style={styles.privacyTxt}>Privacy Policy</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Onboarding')}
+          style={styles.privacyLink}
+          activeOpacity={0.7}
+          accessibilityRole="link"
+          accessibilityLabel="Revisit onboarding"
+        >
+          <Text style={styles.privacyTxt}>Revisit Onboarding</Text>
         </TouchableOpacity>
 
         <View style={{ height: 110 }} />
@@ -116,46 +203,100 @@ export default function ToolsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 4 },
-  title: { fontFamily: fonts.display, fontSize: 28, color: colors.slate },
-  subtitle: { fontFamily: fonts.body, fontSize: 17, color: colors.slateMid, marginTop: 2 },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: 4,
+  },
+  title: { fontFamily: fonts.display, fontSize: textSize.displayLg, color: colors.slate },
+  subtitle: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid, marginTop: 4, lineHeight: 22 },
   scroll: { flex: 1 },
   body: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+
   toolCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: 'white', borderRadius: radius.lg, padding: spacing.md,
-    marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    padding: 20,
+    marginBottom: 12,
   },
-  toolIcon: {
-    width: 48, height: 48, borderRadius: 14,
+  toolTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  toolIconWrap: {
+    width: 46, height: 46, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  toolText: { flex: 1 },
-  toolLabel: { fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.slate, marginBottom: 3 },
-  toolDesc: { fontFamily: fonts.body, fontSize: 16, color: colors.slateLight, lineHeight: 20 },
-  toolChevron: { fontFamily: fonts.body, fontSize: 22, color: colors.slateLight },
-  divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.lg },
-  sectionLabel: {
-    fontFamily: fonts.bodySemiBold, fontSize: 17, letterSpacing: 1.5,
-    textTransform: 'uppercase', color: colors.slateLight, marginBottom: 6,
+  toolDetailPill: {
+    borderRadius: radius.full,
+    paddingHorizontal: 11, paddingVertical: 5,
+    backgroundColor: colors.creamMid,
   },
-  sectionSub: { fontFamily: fonts.body, fontSize: 16, color: colors.slateLight, marginBottom: spacing.md },
-  personaRow: { flexDirection: 'row', gap: 10 },
-  personaCard: {
-    flex: 1, backgroundColor: 'white', borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1.5, borderColor: colors.border,
+  toolDetailTxt: {
+    fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.slateMid,
+  },
+  toolLabel: {
+    fontFamily: fonts.display, fontSize: textSize.headingLg,
+    lineHeight: 32, color: colors.slate, marginBottom: 6,
+  },
+  toolDesc: {
+    fontFamily: fonts.body, fontSize: textSize.body,
+    color: colors.slateMid, lineHeight: 22,
+    marginBottom: 18,
+  },
+  toolFooter: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
   },
-  personaCardActive: { borderColor: colors.lav, backgroundColor: colors.lavPale },
-  personaIcon: { fontSize: 28, marginBottom: 8 },
-  personaName: { fontFamily: fonts.bodyMedium, fontSize: 17, color: colors.slate, marginBottom: 2 },
-  personaNameActive: { color: colors.lav },
-  personaRole: { fontFamily: fonts.bodySemiBold, fontSize: 13, color: colors.slateLight, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6 },
-  personaRoleActive: { color: colors.lav },
-  personaDesc: { fontFamily: fonts.body, fontSize: 15, color: colors.slateMid, textAlign: 'center', lineHeight: 18 },
-  activePip: {
-    width: 6, height: 6, borderRadius: 3, backgroundColor: colors.lav, marginTop: 10,
+  toolCta: {
+    fontFamily: fonts.bodyMedium, fontSize: textSize.body,
   },
-  privacyLink: { alignItems: 'center', paddingVertical: spacing.md },
-  privacyLinkText: { fontFamily: fonts.body, fontSize: 14, color: colors.slateLight, textDecorationLine: 'underline' },
+
+  settingsSectionLabel: {
+    fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight,
+    marginBottom: 10, marginTop: 8,
+  },
+  settingsCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md,
+    marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+  },
+  settingsCardTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.slate, marginBottom: 3 },
+  settingsCardValue: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateLight },
+
+  datePickerCard: {
+    backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md,
+    marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+  },
+  datePicker: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
+  },
+  dateCol: { alignItems: 'center', minWidth: 68 },
+  dateArrow: { padding: 8 },
+  dateVal: {
+    fontFamily: fonts.bodyMedium, fontSize: textSize.heading,
+    color: colors.slate, lineHeight: 28, textAlign: 'center',
+  },
+  dateSep: {
+    fontFamily: fonts.body, fontSize: textSize.title, color: colors.border, marginHorizontal: 2,
+  },
+  setDateBtn: {
+    backgroundColor: colors.lav, borderRadius: radius.full, paddingVertical: 11, alignItems: 'center',
+  },
+  setDateTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
+
+  privacyLink: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  privacyTxt: {
+    fontFamily: fonts.body, fontSize: textSize.caption,
+    color: colors.slateLight, textDecorationLine: 'underline',
+  },
 });

@@ -83,12 +83,25 @@ describe('journal entries', () => {
     expect(entries[1].id).toBe('1');
   });
 
-  it('accumulates multiple entries', async () => {
+  it('accumulates multiple entries across different days', async () => {
     for (let i = 1; i <= 5; i++) {
-      await saveJournalEntry({ id: String(i), date: new Date().toISOString(), hadMigraine: i % 2 === 0, severity: i, treatments: '', functionalImpact: [] });
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      await saveJournalEntry({ id: String(i), date: d.toISOString(), hadMigraine: i % 2 === 0, severity: i, treatments: '', functionalImpact: [] });
     }
     const entries = await getJournalEntries();
     expect(entries).toHaveLength(5);
+  });
+
+  it('replaces an existing entry for the same date instead of duplicating', async () => {
+    const dateStr = '2024-06-01T10:00:00.000Z';
+    await saveJournalEntry({ id: 'a', date: dateStr, hadMigraine: false, severity: null, treatments: '', functionalImpact: [], triggers: [] });
+    await saveJournalEntry({ id: 'b', date: dateStr, hadMigraine: true, severity: 7, treatments: '', functionalImpact: [], triggers: [] });
+    const entries = await getJournalEntries();
+    const sameDay = entries.filter(e => new Date(e.date).toDateString() === new Date(dateStr).toDateString());
+    expect(sameDay).toHaveLength(1);
+    expect(sameDay[0].hadMigraine).toBe(true);
+    expect(sameDay[0].severity).toBe(7);
   });
 
   it('saves no-migraine entry with null severity', async () => {

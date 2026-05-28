@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+
+export const navigationRef = createNavigationContainerRef();
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 
 import { getHasOnboarded, getUserPath } from '../services/storage';
 import { useUserPath } from '../contexts/UserPathContext';
@@ -23,24 +26,27 @@ import ToolsScreen from '../screens/ToolsScreen';
 import SignInScreen from '../screens/SignInScreen';
 import NotificationPermissionScreen from '../screens/NotificationPermissionScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import MidasScreen from '../screens/MidasScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
-  Home: '⌂',
-  Tools: '◈',
-  Reminders: '🔔',
-  Chat: '💬',
-  Journal: '📓',
+  Home: 'home',
+  Trends: 'bar-chart-2',
+  Reminders: 'bell',
+  Chat: 'message-circle',
+  Journal: 'book-open',
 };
 
 function TabIcon({ name, focused }) {
   return (
     <View style={{ alignItems: 'center', gap: 2 }}>
-      <Text style={{ fontSize: 24, color: focused ? colors.lav : colors.slateLight }}>
-        {TAB_ICONS[name]}
-      </Text>
+      <Feather
+        name={TAB_ICONS[name]}
+        size={22}
+        color={focused ? colors.lav : colors.slateLight}
+      />
       {focused && <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: colors.lav }} />}
     </View>
   );
@@ -67,10 +73,10 @@ const TAB_SCREEN_OPTIONS = ({ route }) => ({
 function AwarenessTabs() {
   return (
     <Tab.Navigator screenOptions={TAB_SCREEN_OPTIONS}>
-      <Tab.Screen name="Home" component={AwarenessHomeScreen} />
-      <Tab.Screen name="Tools" component={ToolsScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Journal" component={JournalScreen} />
+      <Tab.Screen name="Home" component={AwarenessHomeScreen} options={{ tabBarAccessibilityLabel: 'Home' }} />
+      <Tab.Screen name="Trends" component={TrendsScreen} options={{ tabBarAccessibilityLabel: 'Trends' }} />
+      <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarAccessibilityLabel: 'Chat with companion' }} />
+      <Tab.Screen name="Journal" component={JournalScreen} options={{ tabBarAccessibilityLabel: 'Journal' }} />
     </Tab.Navigator>
   );
 }
@@ -78,13 +84,19 @@ function AwarenessTabs() {
 function AdherenceTabs() {
   return (
     <Tab.Navigator screenOptions={TAB_SCREEN_OPTIONS}>
-      <Tab.Screen name="Home" component={AdherenceHomeScreen} />
-      <Tab.Screen name="Reminders" component={RemindersScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Journal" component={JournalScreen} />
-      <Tab.Screen name="Tools" component={ToolsScreen} />
+      <Tab.Screen name="Home" component={AdherenceHomeScreen} options={{ tabBarAccessibilityLabel: 'Home' }} />
+      <Tab.Screen name="Reminders" component={RemindersScreen} options={{ tabBarAccessibilityLabel: 'Reminders' }} />
+      <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarAccessibilityLabel: 'Chat with companion' }} />
+      <Tab.Screen name="Journal" component={JournalScreen} options={{ tabBarAccessibilityLabel: 'Journal' }} />
+      <Tab.Screen name="Trends" component={TrendsScreen} options={{ tabBarAccessibilityLabel: 'Trends' }} />
     </Tab.Navigator>
   );
+}
+
+function MainTabs() {
+  const { userPath } = useUserPath();
+  if (userPath === 'adherence') return <AdherenceTabs />;
+  return <AwarenessTabs />;
 }
 
 export default function AppNavigator() {
@@ -102,12 +114,10 @@ export default function AppNavigator() {
 
   if (!initialRoute) return null;
 
-  const MainTabs = userPath === 'adherence' ? AdherenceTabs : AwarenessTabs;
-
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ gestureEnabled: false }} />
         <Stack.Screen name="SignIn" component={SignInScreen} />
         <Stack.Screen name="Quiz" component={QuizScreen} />
         <Stack.Screen name="NotificationPermission" component={NotificationPermissionScreen} />
@@ -135,6 +145,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Trends"
           component={TrendsScreen}
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="Midas"
+          component={MidasScreen}
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
       </Stack.Navigator>

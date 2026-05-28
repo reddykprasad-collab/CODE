@@ -32,6 +32,20 @@ describe('routing logic', () => {
   });
 });
 
+describe('path values match what ChatScreen checks', () => {
+  it('adherence path value is the string "adherence"', async () => {
+    await setUserPath('adherence');
+    const { getUserPath } = require('../services/storage');
+    expect(await getUserPath()).toBe('adherence');
+  });
+
+  it('awareness path value is the string "awareness"', async () => {
+    await setUserPath('awareness');
+    const { getUserPath } = require('../services/storage');
+    expect(await getUserPath()).toBe('awareness');
+  });
+});
+
 describe('quiz routing logic', () => {
   it('q2 yes → adherence path', () => {
     const answers = { q1: 'high', q2: 'yes', q3: 'unsatisfied' };

@@ -18,8 +18,9 @@ import {
   Jost_600SemiBold,
 } from '@expo-google-fonts/jost';
 
-import AppNavigator from './src/navigation';
+import AppNavigator, { navigationRef } from './src/navigation';
 import { UserPathProvider } from './src/contexts/UserPathContext';
+import { OrchestrationProvider } from './src/contexts/OrchestrationContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,7 +41,12 @@ export default function App() {
 
   useEffect(() => {
     notifListener.current = Notifications.addNotificationReceivedListener(() => {});
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {});
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const type = response.notification.request.content.data?.type;
+      if (type === 'dose_reminder' && navigationRef.isReady()) {
+        navigationRef.navigate('Main');
+      }
+    });
     return () => {
       Notifications.removeNotificationSubscription(notifListener.current);
       Notifications.removeNotificationSubscription(responseListener.current);
@@ -57,9 +63,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <UserPathProvider>
-          <View style={{ flex: 1 }} onLayout={onLayout}>
-            <AppNavigator />
-          </View>
+          <OrchestrationProvider>
+            <View style={{ flex: 1 }} onLayout={onLayout}>
+              <AppNavigator />
+            </View>
+          </OrchestrationProvider>
         </UserPathProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
