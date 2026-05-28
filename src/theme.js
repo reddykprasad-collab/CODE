@@ -5,6 +5,7 @@ export const colors = {
   lavLight: '#B8ADDA',
   lavPale: '#ECEAF6',
   sage: '#5A8E83',
+  sageDark: '#3A6B62',
   sagePale: '#E0EDEB',
   sageBorder: '#AECECA',
   slate: '#1E1E2C',

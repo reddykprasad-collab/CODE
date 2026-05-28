@@ -10,7 +10,7 @@ const INTERVENTION_CONFIG = {
     body: 'If you are in crisis, call 988 or go to your nearest emergency room.',
     cta: null,
     accentColor: colors.terraDark,
-    bg: colors.terraPale,
+    bg: colors.terraStrong,
     border: colors.terraBorder,
     icon: 'alert-triangle',
     urgent: true,
@@ -19,7 +19,7 @@ const INTERVENTION_CONFIG = {
     title: 'Prior authorization denied',
     body: 'Appeals are common and often successful. Your doctor can help you navigate next steps.',
     cta: 'What you can do',
-    accentColor: colors.terra,
+    accentColor: colors.terraDark,
     bg: colors.terraPale,
     border: colors.terraBorder,
     icon: 'file-text',
@@ -29,7 +29,7 @@ const INTERVENTION_CONFIG = {
     title: "You're having a better week",
     body: 'Your recent severity is notably lower than your baseline. Consistency is paying off.',
     cta: 'See your trends',
-    accentColor: colors.sage,
+    accentColor: colors.sageDark,
     bg: colors.sagePale,
     border: colors.sageBorder,
     icon: 'trending-down',
@@ -39,7 +39,7 @@ const INTERVENTION_CONFIG = {
     title: 'Your data may warrant a doctor conversation',
     body: 'Recent changes in your scores suggest it may be worth reviewing with your healthcare provider.',
     cta: 'Prep for your visit',
-    accentColor: colors.lav,
+    accentColor: colors.lavDark,
     bg: colors.lavPale,
     border: colors.lavLight,
     icon: 'user',
@@ -49,9 +49,9 @@ const INTERVENTION_CONFIG = {
     title: 'Time to log',
     body: "It's been a while since your last entry. Consistent tracking gives you and your doctor better data.",
     cta: 'Log today',
-    accentColor: colors.slateLight,
-    bg: '#F2F0F8',
-    border: '#C8C4DC',
+    accentColor: colors.lavDark,
+    bg: colors.lavPale,
+    border: colors.lavLight,
     icon: 'book-open',
     urgent: false,
   },
@@ -59,9 +59,9 @@ const INTERVENTION_CONFIG = {
     title: 'Starting strong',
     body: 'Preventive treatments take 3–6 months to show their full effect. Consistency now matters more than early results.',
     cta: null,
-    accentColor: colors.lav,
-    bg: colors.lavPale,
-    border: colors.lavLight,
+    accentColor: colors.sageDark,
+    bg: colors.sagePale,
+    border: colors.sageBorder,
     icon: 'clock',
     urgent: false,
   },
@@ -69,9 +69,9 @@ const INTERVENTION_CONFIG = {
     title: 'Refill may be coming up',
     body: 'Based on your dose history, a refill may be due soon. Ask your pharmacist or doctor.',
     cta: null,
-    accentColor: colors.terra,
-    bg: colors.terraPale,
-    border: colors.terraBorder,
+    accentColor: colors.slateLight,
+    bg: colors.creamMid,
+    border: colors.border,
     icon: 'refresh-cw',
     urgent: false,
   },
@@ -103,7 +103,7 @@ export default function InterventionBanner({ onCtaPress }) {
       accessibilityRole={config.urgent ? 'alert' : 'none'}
       accessibilityLabel={`${config.title}. ${config.body}`}
     >
-      <View style={[styles.accent, { backgroundColor: config.accentColor }]} />
+      <View style={[styles.accent, { backgroundColor: config.accentColor, width: config.urgent ? 6 : 4 }]} />
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Feather name={config.icon} size={15} color={config.accentColor} style={styles.icon} />
