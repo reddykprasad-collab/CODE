@@ -92,10 +92,10 @@ export default function TrendsScreen({ navigation }) {
 
   const trend = lastMonth.length > 0
     ? uniqueMigraineThis < uniqueMigraineLast
-      ? { label: 'Improving', color: colors.sage, icon: 'trending-down', bg: colors.sagePale, border: colors.sageBorder }
+      ? { label: 'Improving', color: colors.sageDark, iconBg: colors.sage, icon: 'trending-down', bg: colors.sagePale, border: colors.sageBorder }
       : uniqueMigraineThis > uniqueMigraineLast
-      ? { label: 'Increasing', color: colors.terra, icon: 'trending-up', bg: colors.terraPale, border: colors.terraBorder }
-      : { label: 'Stable', color: colors.slateLight, icon: 'minus', bg: colors.creamMid, border: colors.border }
+      ? { label: 'Increasing', color: colors.terraDark, iconBg: colors.terra, icon: 'trending-up', bg: colors.terraPale, border: colors.terraBorder }
+      : { label: 'Stable', color: colors.slateLight, iconBg: colors.slateLight, icon: 'minus', bg: colors.creamMid, border: colors.border }
     : null;
 
   // Day-of-week breakdown
@@ -283,8 +283,8 @@ export default function TrendsScreen({ navigation }) {
 
             {/* ── Key stats ── */}
             <View style={styles.statRow}>
-              <View style={[styles.statCard, uniqueMigraineThis >= 8 && { borderColor: colors.terra, backgroundColor: colors.terraPale }]}>
-                <Text style={[styles.statVal, uniqueMigraineThis >= 8 && { color: colors.terra }]}>{uniqueMigraineThis}</Text>
+              <View style={[styles.statCard, uniqueMigraineThis >= 8 && { borderColor: colors.terraBorder, backgroundColor: colors.terraPale }]}>
+                <Text style={[styles.statVal, uniqueMigraineThis >= 8 && { color: colors.terraDark }]}>{uniqueMigraineThis}</Text>
                 <Text style={styles.statLbl}>Migraine days</Text>
                 <Text style={styles.statSub}>this month</Text>
               </View>
@@ -303,7 +303,7 @@ export default function TrendsScreen({ navigation }) {
             {/* ── Month-over-month trend ── */}
             {trend && (
               <View style={[styles.trendCard, { backgroundColor: trend.bg, borderColor: trend.border }]}>
-                <View style={[styles.trendIconWrap, { backgroundColor: trend.color }]}>
+                <View style={[styles.trendIconWrap, { backgroundColor: trend.iconBg }]}>
                   <Feather name={trend.icon} size={18} color={colors.white} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -402,11 +402,11 @@ export default function TrendsScreen({ navigation }) {
                   {topImpacts.map(([impact, count], i) => (
                     <View key={impact} style={[styles.triggerRow, i === topImpacts.length - 1 && { borderBottomWidth: 0 }]}>
                       <View style={[styles.triggerRankWrap, { backgroundColor: colors.terraPale }]}>
-                        <Text style={[styles.triggerRank, { color: colors.terra }]}>{i + 1}</Text>
+                        <Text style={[styles.triggerRank, { color: colors.terraDark }]}>{i + 1}</Text>
                       </View>
                       <Text style={styles.triggerLabel}>{impact}</Text>
                       <View style={[styles.triggerCountWrap, { backgroundColor: colors.lavPale }]}>
-                        <Text style={[styles.triggerCount, { color: colors.lav }]}>{count}×</Text>
+                        <Text style={[styles.triggerCount, { color: colors.lavDark }]}>{count}×</Text>
                       </View>
                     </View>
                   ))}
@@ -627,6 +627,7 @@ const styles = StyleSheet.create({
   // Stats
   statRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   statCard: {
+    ...shadows.sm,
     flex: 1, backgroundColor: colors.white, borderRadius: radius.lg,
     padding: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border,
   },
@@ -636,6 +637,7 @@ const styles = StyleSheet.create({
 
   // Trend
   trendCard: {
+    ...shadows.sm,
     flexDirection: 'row', alignItems: 'center', gap: 14,
     borderRadius: radius.lg, padding: 16, borderWidth: 1, marginBottom: 4,
   },
