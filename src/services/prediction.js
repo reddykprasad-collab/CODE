@@ -117,5 +117,6 @@ export function predictMigraineRisk(entries, weatherData = []) {
   else if (score >= 22) { level = 'moderate'; label = 'Moderate'; }
   else { level = 'low'; label = 'Low'; }
 
-  return { level, label, score, reasons: reasons.slice(0, 3) };
+  const top = reasons.slice(0, 3);
+  return { level, label, score, reasons: top, reason: top.length > 0 ? top[0] : null };
 }

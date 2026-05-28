@@ -1,5 +1,6 @@
 export function groupByPeriod(entries) {
   const now = new Date();
+  entries = entries.slice(0, 60);
 
   const thisWeekStart = new Date(now);
   const daysSinceMonday = (now.getDay() + 6) % 7;

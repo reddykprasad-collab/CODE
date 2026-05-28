@@ -72,7 +72,7 @@ export async function saveJournalEntry(entry) {
 
 export async function getReminderConfig() {
   const raw = await AsyncStorage.getItem(KEYS.REMINDER_CONFIG);
-  return safeParse(raw, null);
+  return safeParse(raw, { frequency: 'daily', timeSlot: 'morning' });
 }
 
 export async function saveReminderConfig(config) {
