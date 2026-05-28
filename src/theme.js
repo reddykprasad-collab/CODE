@@ -20,6 +20,7 @@ export const colors = {
   lavDark: '#4037B0',
   // More saturated than terraPale — used for elevated risk cards to distinguish from moderate
   terraStrong: '#F5CEB5',
+  amber: '#C4A820',
 };
 
 export const fonts = {
@@ -48,6 +49,23 @@ export const radius = {
   lg: 20,
   xl: 24,
   full: 100,
+};
+
+export const shadows = {
+  sm: {
+    shadowColor: '#1E1E2C',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#1E1E2C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
 };
 
 export const textSize = {

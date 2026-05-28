@@ -8,7 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { getJournalEntries, getTreatmentStartDate, getWeatherData, getMidasScores } from '../services/storage';
 import { buildCSV } from '../lib/journal';
 import { syncWeatherData, computeWeatherCorrelation } from '../services/weather';
-import { colors, fonts, spacing, radius, textSize } from '../theme';
+import { colors, fonts, spacing, radius, textSize, shadows } from '../theme';
 
 const DAY_HEADERS = ['Su', 'M', 'Tu', 'W', 'Th', 'F', 'Sa'];
 
@@ -338,7 +338,7 @@ export default function TrendsScreen({ navigation }) {
                     borderRadius: radius.md,
                   }]}>
                     <Text style={styles.compareTag}>After</Text>
-                    <Text style={[styles.compareNum, { color: treatmentComparison.afterPer30 < treatmentComparison.beforePer30 ? colors.sage : colors.terra }]}>
+                    <Text style={[styles.compareNum, { color: treatmentComparison.afterPer30 < treatmentComparison.beforePer30 ? colors.sageDark : colors.terraDark }]}>
                       {treatmentComparison.afterPer30}
                     </Text>
                     <Text style={styles.compareUnit}>days/month</Text>
@@ -439,7 +439,7 @@ export default function TrendsScreen({ navigation }) {
                       <View style={[styles.efficacySegment, { flex: treatmentEfficacy.counts.yes, backgroundColor: colors.sage }]} />
                     )}
                     {treatmentEfficacy.counts.partial > 0 && (
-                      <View style={[styles.efficacySegment, { flex: treatmentEfficacy.counts.partial, backgroundColor: '#C4A820' }]} />
+                      <View style={[styles.efficacySegment, { flex: treatmentEfficacy.counts.partial, backgroundColor: colors.amber }]} />
                     )}
                     {treatmentEfficacy.counts.no > 0 && (
                       <View style={[styles.efficacySegment, { flex: treatmentEfficacy.counts.no, backgroundColor: colors.terra }]} />
@@ -448,7 +448,7 @@ export default function TrendsScreen({ navigation }) {
                   <View style={styles.efficacyLegend}>
                     {[
                       { label: 'Helped', count: treatmentEfficacy.counts.yes, color: colors.sage },
-                      { label: 'Partial', count: treatmentEfficacy.counts.partial, color: '#C4A820' },
+                      { label: 'Partial', count: treatmentEfficacy.counts.partial, color: colors.amber },
                       { label: 'No relief', count: treatmentEfficacy.counts.no, color: colors.terra },
                     ].filter(l => l.count > 0).map(l => (
                       <View key={l.label} style={styles.efficacyLegendItem}>
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
 
   mohWarning: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#FDE8E0', borderWidth: 1, borderColor: colors.terraBorder,
+    backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.md, padding: 14, marginBottom: 4,
   },
   mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
@@ -594,6 +594,7 @@ const styles = StyleSheet.create({
 
   // Calendar
   calCard: {
+    ...shadows.sm,
     backgroundColor: colors.white, borderRadius: radius.xl,
     padding: 18, borderWidth: 1, borderColor: colors.border,
     marginBottom: 12,
@@ -646,6 +647,7 @@ const styles = StyleSheet.create({
 
   // Treatment comparison
   compareCard: {
+    ...shadows.sm,
     backgroundColor: colors.lavPale, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.lavLight,
     flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, marginBottom: 8,
   },
@@ -664,13 +666,14 @@ const styles = StyleSheet.create({
 
   // Day bars + card
   card: {
+    ...shadows.sm,
     backgroundColor: colors.white, borderRadius: radius.lg,
     padding: 16, borderWidth: 1, borderColor: colors.border,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   barLabel: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.slateMid, width: 34 },
   barTrack: {
-    flex: 1, height: 8, backgroundColor: colors.creamMid,
+    flex: 1, height: 10, backgroundColor: colors.creamMid,
     borderRadius: radius.full, overflow: 'hidden',
   },
   barFill: { height: '100%', backgroundColor: colors.lav, borderRadius: radius.full },
@@ -688,12 +691,13 @@ const styles = StyleSheet.create({
   triggerRank: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.lav },
   triggerLabel: { flex: 1, fontFamily: fonts.body, fontSize: textSize.body, color: colors.slate },
   triggerCountWrap: {
-    backgroundColor: colors.terraPale, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3,
+    backgroundColor: colors.terraStrong, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3,
   },
-  triggerCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.terra },
+  triggerCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.terraDark },
 
   // HCP nudge
   hcpCard: {
+    ...shadows.sm,
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: colors.lavPale, borderWidth: 1, borderColor: colors.lavLight,
     borderRadius: radius.xl, padding: 16, marginTop: 8,
@@ -715,11 +719,11 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terra, marginBottom: 4 },
+  mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 4 },
   mohBody: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateMid, lineHeight: 19 },
 
   // Treatment efficacy
-  efficacyBar: { flexDirection: 'row', height: 10, borderRadius: radius.full, overflow: 'hidden', marginBottom: 12 },
+  efficacyBar: { flexDirection: 'row', height: 12, borderRadius: radius.full, overflow: 'hidden', marginBottom: 12 },
   efficacySegment: { height: '100%' },
   efficacyLegend: { flexDirection: 'row', gap: 14, marginBottom: 12 },
   efficacyLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
@@ -737,6 +741,7 @@ const styles = StyleSheet.create({
 
   // MIDAS nudge
   midasCard: {
+    ...shadows.sm,
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.xl, padding: 16, marginTop: 8,
@@ -745,7 +750,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
   },
-  midasTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terra, marginBottom: 3 },
+  midasTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
   midasDesc: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateMid, lineHeight: 18 },
 
   // Empty

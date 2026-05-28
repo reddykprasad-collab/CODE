@@ -15,7 +15,7 @@ import {
 } from '../services/storage';
 import { syncWeatherData } from '../services/weather';
 import { predictMigraineRisk } from '../services/prediction';
-import { colors, fonts, spacing, radius, textSize } from '../theme';
+import { colors, fonts, spacing, radius, textSize, shadows } from '../theme';
 import EducationInsightCard from '../components/EducationInsightCard';
 import TreatmentDateCard from '../components/TreatmentDateCard';
 import TreatmentStatusSection from '../components/TreatmentStatusSection';
@@ -389,7 +389,7 @@ export default function AdherenceHomeScreen({ navigation }) {
                 accessibilityLabel="Clear day"
                 accessibilityState={{ checked: quickMigraine === false }}
               >
-                <Text style={[styles.quickLogOptTxt, quickMigraine === false && { color: colors.sage }]}>Clear day</Text>
+                <Text style={[styles.quickLogOptTxt, quickMigraine === false && { color: colors.sageDark }]}>Clear day</Text>
               </TouchableOpacity>
             </View>
 
@@ -547,7 +547,7 @@ export default function AdherenceHomeScreen({ navigation }) {
         {/* Weekly snapshot */}
         {weekSummary !== null && weekSummary.total > 0 && (
           <TouchableOpacity
-            style={[styles.snapshotCard, weekSummary.count > 0 && { backgroundColor: colors.terraPale, borderColor: colors.terraBorder }]}
+            style={[styles.snapshotCard, weekSummary.count > 0 && { backgroundColor: colors.terraStrong, borderColor: colors.terraBorder }]}
             onPress={() => navigation.navigate('Trends')}
             activeOpacity={0.85}
           >
@@ -617,6 +617,7 @@ const styles = StyleSheet.create({
 
   // Hero: pending
   heroPending: {
+    ...shadows.md,
     backgroundColor: colors.sagePale, borderWidth: 1, borderColor: colors.sageBorder,
     borderRadius: radius.xl, padding: spacing.lg, marginBottom: 10,
   },
@@ -643,6 +644,7 @@ const styles = StyleSheet.create({
 
   // Consistency card
   consistencyCard: {
+    ...shadows.sm,
     backgroundColor: colors.lavPale, borderWidth: 1, borderColor: colors.lavLight,
     borderRadius: radius.xl, padding: spacing.lg, marginBottom: 10,
   },
@@ -667,7 +669,7 @@ const styles = StyleSheet.create({
   weekLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   weekLegendDot: { width: 10, height: 10, borderRadius: 5 },
   weekLegendTxt: { fontFamily: fonts.body, fontSize: textSize.fine, color: colors.slateLight },
-  progressTrack: { height: 4, backgroundColor: colors.white, borderRadius: radius.full, overflow: 'hidden' },
+  progressTrack: { height: 6, backgroundColor: colors.white, borderRadius: radius.full, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.lav, borderRadius: radius.full },
   streakHint: { fontFamily: fonts.body, fontSize: textSize.fine, color: colors.slateLight, textAlign: 'center', marginTop: 10 },
 
@@ -683,7 +685,7 @@ const styles = StyleSheet.create({
   // Action grid
   actionGrid: { gap: 9, marginBottom: 10 },
   actionRow: { flexDirection: 'row', gap: 9 },
-  actionTile: { flex: 1, borderWidth: 1, borderRadius: radius.xl, padding: 16, minHeight: 86, justifyContent: 'flex-end', gap: 10 },
+  actionTile: { ...shadows.sm, flex: 1, borderWidth: 1, borderRadius: radius.xl, padding: 16, minHeight: 86, justifyContent: 'flex-end', gap: 10 },
   actionTilePrimary: { minHeight: 96 },
   actionIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   actionLbl: { fontFamily: fonts.bodySemiBold, fontSize: textSize.body, color: colors.slate },
@@ -696,13 +698,13 @@ const styles = StyleSheet.create({
   },
   predEmptyTitle: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight, marginBottom: 6 },
   predEmptyBody: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateLight, lineHeight: 22 },
-  predCard: { borderWidth: 1, borderRadius: radius.xl, padding: 18, marginBottom: 10 },
+  predCard: { ...shadows.sm, borderWidth: 1, borderRadius: radius.xl, padding: 18, marginBottom: 10 },
   predCard_low:      { backgroundColor: colors.sagePale,   borderColor: colors.sageBorder },
   predCard_moderate: { backgroundColor: colors.terraPale,  borderColor: colors.terraBorder },
   predCard_elevated: { backgroundColor: colors.terraStrong, borderColor: colors.terra },
   predTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   predEyebrow: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, letterSpacing: 0.3 },
-  predText_low:      { color: colors.sage },
+  predText_low:      { color: colors.sageDark },
   predText_moderate: { color: colors.terra },
   predText_elevated: { color: colors.terraDark },
   predBadge: {
@@ -726,6 +728,7 @@ const styles = StyleSheet.create({
 
   // Quick log
   quickLogCard: {
+    ...shadows.sm,
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.xl, padding: 18, marginBottom: 10,
   },
@@ -747,7 +750,7 @@ const styles = StyleSheet.create({
   quickErrorTxt: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.terra, marginTop: 8 },
   mohWarning: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: '#FDE8E0', borderWidth: 1, borderColor: colors.terraBorder,
+    backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.md, padding: 14, marginBottom: 10,
   },
   mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },

@@ -9,7 +9,7 @@ import { getAssessmentResult, getJournalEntries, saveJournalEntry } from '../ser
 import { useOrchestration } from '../contexts/OrchestrationContext';
 import { EVENTS } from '../services/orchestration';
 import InterventionBanner from '../components/InterventionBanner';
-import { colors, fonts, spacing, radius, textSize } from '../theme';
+import { colors, fonts, spacing, radius, textSize, shadows } from '../theme';
 
 const ARTICLES = [
   { id: 'cgrp-education', title: 'What is a CGRP and how does it relate to migraines?', meta: '5 min · Education' },
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
 
-  heroCard: { borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, backgroundColor: colors.lav },
+  heroCard: { ...shadows.md, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.sm, backgroundColor: colors.lav },
   heroEy: { fontFamily: fonts.bodySemiBold, fontSize: textSize.fine, letterSpacing: 0.8, color: 'rgba(253,252,249,0.9)', marginBottom: 8 },
   heroTitle: { fontFamily: fonts.display, fontSize: textSize.heading, color: colors.white, lineHeight: 29, marginBottom: 10 },
   heroDesc: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: 'rgba(253,252,249,0.82)', lineHeight: 24 },
@@ -349,6 +349,7 @@ const styles = StyleSheet.create({
 
   // Quick log
   quickLogCard: {
+    ...shadows.sm,
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.xl, padding: 18, marginBottom: 10,
   },
@@ -384,6 +385,7 @@ const styles = StyleSheet.create({
 
   // 30-day stats
   statsCard: {
+    ...shadows.sm,
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.xl, padding: 18, marginBottom: 10,
   },
@@ -396,11 +398,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 10,
   },
-  statsAlertTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.terra, lineHeight: 21 },
+  statsAlertTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.terraDark, lineHeight: 21 },
   statsLink: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.lav, textAlign: 'right' },
 
   // Articles
   featuredCard: {
+    ...shadows.sm,
     backgroundColor: colors.lavPale, borderRadius: radius.lg, padding: spacing.lg,
     marginBottom: 9, borderWidth: 1, borderColor: colors.lavLight,
   },
@@ -416,6 +419,7 @@ const styles = StyleSheet.create({
   artRowMeta: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateLight },
 
   card: {
+    ...shadows.sm,
     flexDirection: 'row', alignItems: 'center', gap: 14,
     backgroundColor: colors.white, borderRadius: radius.lg, padding: spacing.md,
     marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.border,
