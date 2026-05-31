@@ -3,19 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, radius, textSize } from '../theme';
 import FutureDatePicker from './FutureDatePicker';
+import { daysUntilDate } from '../lib/dateUtils';
 
 const PA_STATUSES = [
   { value: 'not_submitted', label: 'Not submitted', color: colors.slateLight, bg: colors.creamMid,    border: colors.border },
-  { value: 'pending',       label: 'Pending',        color: '#7A6A10',         bg: '#FAF5E4',          border: '#D4C886' },
-  { value: 'approved',      label: 'Approved',       color: colors.sage,       bg: colors.sagePale,    border: colors.sageBorder },
-  { value: 'denied',        label: 'Denied',         color: colors.terra,      bg: colors.terraPale,   border: colors.terraBorder },
-  { value: 'expired',       label: 'Expired',        color: colors.terraDark,  bg: '#FDE8E0',          border: colors.terraBorder },
+  { value: 'pending',       label: 'Pending',        color: colors.amber,      bg: '#1C1508',          border: '#3D2E08' },
+  { value: 'approved',      label: 'Approved',       color: colors.sageDark,   bg: colors.sagePale,    border: colors.sageBorder },
+  { value: 'denied',        label: 'Denied',         color: colors.terraDark,  bg: colors.terraPale,   border: colors.terraBorder },
+  { value: 'expired',       label: 'Expired',        color: colors.terraDark,  bg: colors.terraPale,   border: colors.terraBorder },
 ];
-
-function daysUntil(isoDate) {
-  if (!isoDate) return null;
-  return Math.ceil((new Date(isoDate).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 864e5);
-}
 
 function formatShortDate(isoDate) {
   if (!isoDate) return null;
@@ -23,13 +19,14 @@ function formatShortDate(isoDate) {
 }
 
 // Self-contained status display + editing. Calls onUpdate(patch) when user saves any change.
-export default function TreatmentStatusSection({ status, onUpdate }) {
+// onNavigateToAppeal is optional — shown only when paStatus === 'denied'.
+export default function TreatmentStatusSection({ status, onUpdate, onNavigateToAppeal }) {
   const [editPanel, setEditPanel] = useState(null); // null | 'main' | 'pa_expiry' | 'refill'
   const [draftPAStatus, setDraftPAStatus] = useState(status.paStatus);
 
   const paInfo = PA_STATUSES.find(p => p.value === status.paStatus) || PA_STATUSES[0];
-  const paDays = daysUntil(status.paExpiryDate);
-  const refillDays = daysUntil(status.refillDate);
+  const paDays = daysUntilDate(status.paExpiryDate);
+  const refillDays = daysUntilDate(status.refillDate);
   const paUrgent = (paInfo.value === 'approved' && paDays !== null && paDays <= 14) || paInfo.value === 'denied' || paInfo.value === 'expired';
   const refillUrgent = refillDays !== null && refillDays <= 7;
 
@@ -74,7 +71,7 @@ export default function TreatmentStatusSection({ status, onUpdate }) {
               <Text style={[styles.pillTxt, { color: paInfo.color }]}>{paInfo.label}</Text>
             </View>
             {status.paExpiryDate && paInfo.value === 'approved' && (
-              <Text style={[styles.dueDate, paDays !== null && paDays <= 14 && { color: colors.terra }]}>
+              <Text style={[styles.dueDate, paDays !== null && paDays <= 14 && { color: colors.terraDark }]}>
                 {paDays === 0 ? 'Expires today' : paDays < 0 ? 'Expired' : `Expires ${formatShortDate(status.paExpiryDate)}`}
                 {paDays !== null && paDays > 0 && paDays <= 14 ? ` · ${paDays}d` : ''}
               </Text>
@@ -87,11 +84,11 @@ export default function TreatmentStatusSection({ status, onUpdate }) {
             <Text style={styles.itemLabel}>Next Refill</Text>
             {status.refillDate ? (
               <>
-                <Text style={[styles.refillDate, refillUrgent && { color: colors.terra }]}>
+                <Text style={[styles.refillDate, refillUrgent && { color: colors.terraDark }]}>
                   {formatShortDate(status.refillDate)}
                 </Text>
                 {refillDays !== null && (
-                  <Text style={[styles.dueDate, refillUrgent && { color: colors.terra }]}>
+                  <Text style={[styles.dueDate, refillUrgent && { color: colors.terraDark }]}>
                     {refillDays === 0 ? 'Due today' : refillDays < 0 ? `${Math.abs(refillDays)}d overdue` : `in ${refillDays}d`}
                   </Text>
                 )}
@@ -107,6 +104,18 @@ export default function TreatmentStatusSection({ status, onUpdate }) {
             <Feather name="alert-circle" size={13} color={colors.terra} />
             <Text style={styles.alertTxt}>{urgentAlertText()}</Text>
           </View>
+        )}
+
+        {status.paStatus === 'denied' && onNavigateToAppeal && (
+          <TouchableOpacity
+            style={styles.appealBtn}
+            onPress={onNavigateToAppeal}
+            activeOpacity={0.82}
+            accessibilityRole="button"
+            accessibilityLabel="Draft appeal letter"
+          >
+            <Text style={styles.appealBtnTxt}>Draft appeal letter →</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -221,7 +230,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 6,
     marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.terraBorder,
   },
-  alertTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.terra, flex: 1, lineHeight: 20 },
+  alertTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.terraDark, flex: 1, lineHeight: 20 },
+  appealBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.slateLight,
+    borderRadius: radius.full,
+  },
+  appealBtnTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.slateLight },
 
   editCard: {
     backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,

@@ -4,6 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { setHasOnboarded, setUserPath } from '../services/storage';
+import { useOrchestration } from '../contexts/OrchestrationContext';
+import { EVENTS } from '../services/orchestration';
 import { sharedStyles } from '../styles/shared';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius, textSize } from '../theme';
@@ -23,6 +25,7 @@ const QUESTIONS = [
 export default function QuizScreen({ navigation }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
+  const { emitEvent } = useOrchestration();
 
   const q = QUESTIONS[step];
   const selected = answers[q.id];
@@ -34,6 +37,9 @@ export default function QuizScreen({ navigation }) {
     } else {
       const path = answers.q2 === 'yes' ? 'adherence' : 'awareness';
       await setUserPath(path);
+      if (path === 'adherence') {
+        await emitEvent(EVENTS.TREATMENT_START_SET, {});
+      }
       await setHasOnboarded();
       navigation.replace('NotificationPermission');
     }

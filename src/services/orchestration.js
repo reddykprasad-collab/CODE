@@ -180,6 +180,14 @@ export const RULES = [
     suppress: [],
   },
   {
+    id: 'treatment-start-phase-transition',
+    event: EVENTS.TREATMENT_START_SET,
+    condition: (state) => state.journeyPhase === 'awareness',
+    nextPhase: () => 'new_start',
+    interventions: [],
+    suppress: [],
+  },
+  {
     // BUG-3 fix: treatment discontinued resets to awareness and suppresses adherence interventions
     id: 'treatment-discontinued-reset',
     event: EVENTS.TREATMENT_DISCONTINUED,

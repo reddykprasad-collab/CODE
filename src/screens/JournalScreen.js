@@ -28,9 +28,9 @@ const PRODROME_SIGNS = [
 ];
 
 const EFFICACY_OPTIONS = [
-  { label: 'Helped fully', value: 'yes', color: colors.sage, bg: colors.sagePale, border: colors.sageBorder },
-  { label: 'Partial relief', value: 'partial', color: '#8E7E3B', bg: '#FAF5E4', border: '#D4C886' },
-  { label: 'No relief', value: 'no', color: colors.terra, bg: colors.terraPale, border: colors.terraBorder },
+  { label: 'Helped fully', value: 'yes', color: colors.sageDark, bg: colors.sagePale, border: colors.sageBorder },
+  { label: 'Partial relief', value: 'partial', color: '#FFC030', bg: '#1C1508', border: '#3D2E08' },
+  { label: 'No relief', value: 'no', color: colors.terraDark, bg: colors.terraPale, border: colors.terraBorder },
 ];
 
 const TRIGGERS = [
@@ -59,7 +59,6 @@ export default function JournalScreen({ navigation }) {
   const { emitEvent } = useOrchestration();
   const [hadMigraine, setHadMigraine] = useState(null);
   const [severity, setSeverity] = useState(5);
-  const [treatments, setTreatments] = useState('');
   const [impacts, setImpacts] = useState([]);
   const [triggers, setTriggers] = useState([]);
   const [recentEntries, setRecentEntries] = useState([]);
@@ -98,11 +97,6 @@ export default function JournalScreen({ navigation }) {
   const hasLoggedDate = useMemo(
     () => !editingEntry && recentEntries.some(e => new Date(e.date).toDateString() === entryDate.toDateString()),
     [recentEntries, entryDate, editingEntry]
-  );
-
-  const lastTreatments = useMemo(
-    () => recentEntries.find(e => e.treatments)?.treatments || null,
-    [recentEntries]
   );
 
   const sortedTriggers = useMemo(() => {
@@ -146,7 +140,6 @@ export default function JournalScreen({ navigation }) {
     setEntryDate(new Date(entry.date));
     setHadMigraine(entry.hadMigraine);
     setSeverity(entry.severity ?? 5);
-    setTreatments(entry.treatments || '');
     setAcuteTreatments(entry.acuteTreatments || []);
     setTreatmentHelped(entry.treatmentHelped || null);
     setProdrome(entry.prodrome || []);
@@ -193,7 +186,6 @@ export default function JournalScreen({ navigation }) {
       setRecentEntries(updated);
       setHadMigraine(null);
       setSeverity(5);
-      setTreatments('');
       setAcuteTreatments([]);
       setTreatmentHelped(null);
       setProdrome([]);
@@ -250,7 +242,6 @@ export default function JournalScreen({ navigation }) {
       } catch {}
       setHadMigraine(entry.hadMigraine);
       setSeverity(entry.severity ?? 5);
-      setTreatments(entry.treatments || '');
       setAcuteTreatments(entry.acuteTreatments || []);
       setTreatmentHelped(entry.treatmentHelped || null);
       setProdrome(entry.prodrome || []);
@@ -289,8 +280,8 @@ export default function JournalScreen({ navigation }) {
               accessibilityLabel="View trends"
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 }}
             >
-              <Text style={[styles.toggleView, { color: colors.sage, fontSize: textSize.base }]}>View trends</Text>
-              <Feather name="arrow-right" size={13} color={colors.sage} />
+              <Text style={[styles.toggleView, { color: colors.sageDark, fontSize: textSize.base }]}>View trends</Text>
+              <Feather name="arrow-right" size={13} color={colors.sageDark} />
             </TouchableOpacity>
           )}
         </View>
@@ -304,8 +295,8 @@ export default function JournalScreen({ navigation }) {
               <Text style={styles.editingBannerTxt}>
                 Editing {new Date(editingEntry.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </Text>
-              <TouchableOpacity onPress={() => { setEditingEntry(null); setEntryDate(new Date()); setHadMigraine(null); setSeverity(5); setTreatments(''); setImpacts([]); setTriggers([]); }}>
-                <Text style={{ fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terra }}>Cancel</Text>
+              <TouchableOpacity onPress={() => { setEditingEntry(null); setEntryDate(new Date()); setHadMigraine(null); setSeverity(5); setImpacts([]); setTriggers([]); }}>
+                <Text style={{ fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark }}>Cancel</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -353,7 +344,7 @@ export default function JournalScreen({ navigation }) {
                 accessibilityLabel="Yes, I had a migraine"
                 accessibilityState={{ checked: hadMigraine === true }}
               >
-                <Text style={[styles.toggleOptText, hadMigraine === true && { color: colors.terra }]}>Yes</Text>
+                <Text style={[styles.toggleOptText, hadMigraine === true && { color: colors.terraDark }]}>Yes</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.toggleOpt, hadMigraine === false && styles.toggleNo]}
@@ -363,7 +354,7 @@ export default function JournalScreen({ navigation }) {
                 accessibilityLabel="No migraine today"
                 accessibilityState={{ checked: hadMigraine === false }}
               >
-                <Text style={[styles.toggleOptText, hadMigraine === false && { color: colors.sage }]}>No</Text>
+                <Text style={[styles.toggleOptText, hadMigraine === false && { color: colors.sageDark }]}>No</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -409,7 +400,7 @@ export default function JournalScreen({ navigation }) {
                       accessibilityLabel={opt.label}
                       accessibilityState={{ checked: sel }}
                     >
-                      <Text style={[styles.impactOptText, sel && { color: colors.terra }]}>{opt.label}</Text>
+                      <Text style={[styles.impactOptText, sel && { color: colors.terraDark }]}>{opt.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -552,7 +543,7 @@ export default function JournalScreen({ navigation }) {
                   accessibilityLabel={t}
                   accessibilityState={{ checked: triggers.includes(t) }}
                 >
-                  <Text style={[styles.impactOptText, triggers.includes(t) && { color: colors.sage }]}>{t}</Text>
+                  <Text style={[styles.impactOptText, triggers.includes(t) && { color: colors.sageDark }]}>{t}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -607,7 +598,7 @@ export default function JournalScreen({ navigation }) {
                 accessibilityLabel="Yes, today is a period day"
                 accessibilityState={{ checked: isPeriodDay === true }}
               >
-                <Text style={[styles.toggleOptText, isPeriodDay === true && { color: colors.terra }]}>Yes</Text>
+                <Text style={[styles.toggleOptText, isPeriodDay === true && { color: colors.terraDark }]}>Yes</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.toggleOpt, isPeriodDay === false && styles.toggleNo]}
@@ -617,7 +608,7 @@ export default function JournalScreen({ navigation }) {
                 accessibilityLabel="No, not a period day"
                 accessibilityState={{ checked: isPeriodDay === false }}
               >
-                <Text style={[styles.toggleOptText, isPeriodDay === false && { color: colors.sage }]}>No</Text>
+                <Text style={[styles.toggleOptText, isPeriodDay === false && { color: colors.sageDark }]}>No</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -650,12 +641,12 @@ export default function JournalScreen({ navigation }) {
                   <Text style={styles.summaryLabel}>logged</Text>
                 </View>
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryNum, { color: colors.terra }]}>{migraineCount}</Text>
+                  <Text style={[styles.summaryNum, { color: colors.terraDark }]}>{migraineCount}</Text>
                   <Text style={styles.summaryLabel}>migraine</Text>
                 </View>
                 {clearCount > 0 && (
                   <View style={styles.summaryItem}>
-                    <Text style={[styles.summaryNum, { color: colors.sage }]}>{clearCount}</Text>
+                    <Text style={[styles.summaryNum, { color: colors.sageDark }]}>{clearCount}</Text>
                     <Text style={styles.summaryLabel}>clear</Text>
                   </View>
                 )}
@@ -805,11 +796,6 @@ const styles = StyleSheet.create({
   severityBtnActive: { borderColor: colors.lav, backgroundColor: colors.lavPale },
   severityBtnTxt: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid },
   severityBtnTxtActive: { fontFamily: fonts.bodyMedium, color: colors.lav },
-  textarea: {
-    backgroundColor: colors.cream, borderWidth: 1.5, borderColor: colors.border,
-    borderRadius: 14, padding: 13, fontFamily: fonts.body, fontSize: textSize.base,
-    color: colors.slate, lineHeight: 22, minHeight: 76, textAlignVertical: 'top',
-  },
   impactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   impactOpt: {
     paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1.5,
@@ -846,14 +832,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, padding: 12, marginBottom: 20,
   },
   updateBannerTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.lav, flex: 1, lineHeight: 20 },
-  quickFillChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 8, paddingVertical: 8, paddingHorizontal: 12,
-    backgroundColor: colors.lavPale, borderRadius: radius.full,
-    borderWidth: 1, borderColor: colors.lavLight, alignSelf: 'flex-start',
-  },
-  quickFillTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.lav },
-  quickFillValue: { fontFamily: fonts.bodyMedium, color: colors.lav },
   deleteBtn: { marginTop: 2, padding: 2 },
   editBtn: { marginTop: 2, padding: 2 },
   editingBanner: {
@@ -926,9 +904,9 @@ const styles = StyleSheet.create({
   entryStatusBadgeMigraine: { backgroundColor: colors.white },
   entryStatusBadgeClear: { backgroundColor: colors.sagePale },
   entryStatusTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.label },
-  entryStatusTxtMigraine: { color: colors.terra },
-  entryStatusTxtClear: { color: colors.sage },
-  entrySeverity: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.terra },
+  entryStatusTxtMigraine: { color: colors.terraDark },
+  entryStatusTxtClear: { color: colors.sageDark },
+  entrySeverity: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.terraDark },
   entryTriggerLine: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateLight, marginBottom: 6 },
   entryTreatmentRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   entryTreatment: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateLight, lineHeight: 18, flex: 1 },

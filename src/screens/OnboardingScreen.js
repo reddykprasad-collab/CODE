@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fonts, spacing, radius, textSize } from '../theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, fonts, spacing, radius, textSize, gradients } from '../theme';
 
 export default function OnboardingScreen({ navigation }) {
   return (
@@ -33,13 +34,19 @@ export default function OnboardingScreen({ navigation }) {
             ))}
           </View>
           <TouchableOpacity
-            style={styles.btnPrimary}
             onPress={() => navigation.navigate('Quiz')}
             activeOpacity={0.88}
             accessibilityRole="button"
             accessibilityLabel="Get started"
           >
-            <Text style={styles.btnPrimaryText}>Get started</Text>
+            <LinearGradient
+              colors={gradients.primary}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.btnPrimary}
+            >
+              <Text style={styles.btnPrimaryText}>Get started</Text>
+            </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.btnGhost}
@@ -70,10 +77,11 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: spacing.xl, paddingBottom: 44 },
   top: { flex: 1, justifyContent: 'center' },
   mark: {
-    width: 52, height: 52, backgroundColor: colors.lav, borderRadius: 16,
+    width: 52, height: 52, backgroundColor: colors.lavPale, borderRadius: 16,
     marginBottom: 44, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.lav,
   },
-  markText: { color: colors.white, fontSize: textSize.headingLg },
+  markText: { color: colors.lav, fontSize: textSize.headingLg },
   eyebrow: {
     fontFamily: fonts.bodySemiBold, fontSize: textSize.label,
     color: colors.lav, marginBottom: 14,
@@ -95,8 +103,9 @@ const styles = StyleSheet.create({
   },
   pillText: { fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.lav },
   btnPrimary: {
-    backgroundColor: colors.lav, borderRadius: 16,
+    borderRadius: 16,
     paddingVertical: 17, alignItems: 'center',
+    overflow: 'hidden',
   },
   btnPrimaryText: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
   btnGhost: { paddingVertical: 12, alignItems: 'center' },

@@ -1,26 +1,38 @@
 export const colors = {
-  cream: '#F7F4EF',
+  // Surfaces — warm light mode
+  cream: '#F7F5F0',
   creamMid: '#EDE9E2',
-  lav: '#5E54D4',
-  lavLight: '#A09AE0',
-  lavPale: '#EEECFB',
-  sage: '#1A7D6E',
-  sageDark: '#136B5C',
-  sagePale: '#DCF0ED',
-  sageBorder: '#8ECFC6',
-  slate: '#1E1E2C',
-  slateMid: '#3E3E4E',
-  slateLight: '#5A5A6E',
-  border: '#D8D3CB',
-  terra: '#C45D38',
-  terraDark: '#7A2D10',
-  terraPale: '#FCE9DE',
-  terraBorder: '#E8B49C',
-  white: '#FDFCF9',
-  lavDark: '#4037B0',
-  // More saturated than terraPale — used for elevated risk cards to distinguish from moderate
-  terraStrong: '#F5CEB5',
-  amber: '#C4A820',
+  white: '#FFFFFF',
+
+  // Primary — deep electric violet (much more saturated than before)
+  lav: '#5335F5',
+  lavLight: '#8B74FF',
+  lavPale: '#EDE8FF',
+  lavDark: '#3B22CE',
+
+  // Positive — vivid emerald
+  sage: '#059669',
+  sageDark: '#047857',
+  sagePale: '#ECFDF5',
+  sageBorder: '#6EE7B7',
+
+  // Text
+  slate: '#0E0D1A',
+  slateMid: '#3D3D52',
+  slateLight: '#73728A',
+
+  // Borders
+  border: '#E0DBD4',
+
+  // Alert — bold coral-red
+  terra: '#E8442A',
+  terraDark: '#B52415',
+  terraPale: '#FEF0EC',
+  terraBorder: '#FBBBAF',
+  terraStrong: '#FDD8D2',
+
+  // Misc
+  amber: '#D97706',
 };
 
 export const fonts = {
@@ -53,18 +65,18 @@ export const radius = {
 
 export const shadows = {
   sm: {
-    shadowColor: '#1E1E2C',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  md: {
-    shadowColor: '#1E1E2C',
+    shadowColor: '#0E0D1A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  md: {
+    shadowColor: '#0E0D1A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
   },
 };
 
@@ -89,4 +101,12 @@ export const textSize = {
   metric: 40,
   metricLg: 42,
   hero: 50,
+};
+
+// Gradient presets
+export const gradients = {
+  primary: ['#5335F5', '#059669'],   // deep violet → vivid emerald
+  violet: ['#3B22CE', '#8B74FF'],
+  emerald: ['#047857', '#059669'],
+  danger: ['#B52415', '#E8442A'],
 };

@@ -6,7 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius, textSize } from '../theme';
 import { sharedStyles } from '../styles/shared';
-import { saveAssessmentResult } from '../services/storage';
+import { saveAssessmentResult, setUserPath, setTreatmentStartDate } from '../services/storage';
+import { useOrchestration } from '../contexts/OrchestrationContext';
+import { EVENTS } from '../services/orchestration';
 
 const QUESTIONS = [
   {
@@ -104,6 +106,7 @@ export default function AssessmentScreen({ navigation }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [done, setDone] = useState(false);
+  const { emitEvent } = useOrchestration();
 
   const q = QUESTIONS[step];
   const selected = answers[q?.id];
@@ -163,6 +166,22 @@ export default function AssessmentScreen({ navigation }) {
               accessibilityLabel={result.ctaLabel}
             >
               <Text style={styles.primaryBtnText}>{result.ctaLabel}</Text>
+            </TouchableOpacity>
+          )}
+          {result === RESULTS.strong && (
+            <TouchableOpacity
+              style={styles.startTreatmentBtn}
+              onPress={async () => {
+                await setUserPath('adherence');
+                await setTreatmentStartDate(new Date().toISOString());
+                emitEvent(EVENTS.TREATMENT_START_SET, {});
+                navigation.navigate('Main');
+              }}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="I just started preventive treatment"
+            >
+              <Text style={styles.startTreatmentBtnTxt}>I just started preventive treatment</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -339,4 +358,18 @@ const styles = StyleSheet.create({
   summaryRow: { paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   summaryQ: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateLight, marginBottom: 3, lineHeight: 17 },
   summaryA: { fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.slate },
+  startTreatmentBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.lav,
+    borderRadius: radius.full,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  startTreatmentBtnTxt: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: textSize.body,
+    color: colors.lav,
+  },
 });

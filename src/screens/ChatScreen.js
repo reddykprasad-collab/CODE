@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { sendMessageStreaming, isEscalation, buildAdherenceContext, buildAwarenessContext, isDemoMode } from '../services/claude';
 import { INTERVENTION_CONTEXTS } from '../services/orchestration';
 import { getChatMessages, saveChatMessages, getUserPath, getJournalEntries, getStreak, getTreatmentStartDate, getMidasScores } from '../services/storage';
+// getUserPath kept as fallback for the initial mount race where derivedUserPath may not yet be set
 import { colors, fonts, spacing, radius, textSize } from '../theme';
 import { useOrchestration } from '../contexts/OrchestrationContext';
 import { EVENTS } from '../services/orchestration';
@@ -154,13 +155,12 @@ function EscalationBubble() {
 }
 
 export default function ChatScreen() {
-  const { emitEvent, interventionQueue } = useOrchestration();
+  const { emitEvent, interventionQueue, derivedUserPath } = useOrchestration();
   const orchestrationContext = useMemo(() => {
     const item = interventionQueue.find(i => i.channel?.includes('chat_context'));
     return item ? (INTERVENTION_CONTEXTS[item.type] ?? null) : null;
   }, [interventionQueue]);
   const [messages, setMessages] = useState(null);
-  const [userPath, setUserPath] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState(null);
@@ -176,12 +176,12 @@ export default function ChatScreen() {
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Load messages and user path once on mount
+  // Load messages once on mount; fall back to storage for path if context hasn't loaded yet
   useEffect(() => {
     (async () => {
       try {
-        const [saved, path] = await Promise.all([getChatMessages(), getUserPath()]);
-        setUserPath(path);
+        const [saved, storedPath] = await Promise.all([getChatMessages(), getUserPath()]);
+        const path = derivedUserPath ?? storedPath;
         if (saved && saved.length > 0) {
           setMessages(saved);
         } else if (path === 'adherence') {
@@ -200,7 +200,7 @@ export default function ChatScreen() {
   useFocusEffect(useCallback(() => {
     (async () => {
       try {
-        const path = userPath ?? await getUserPath();
+        const path = derivedUserPath ?? await getUserPath();
         if (path === 'adherence') {
           const [entries, streak, treatmentStart, midasScores] = await Promise.all([
             getJournalEntries(),
@@ -218,7 +218,7 @@ export default function ChatScreen() {
         if (__DEV__) console.warn('ChatScreen context refresh:', err);
       }
     })();
-  }, [userPath]));
+  }, [derivedUserPath]));
 
   useEffect(() => {
     if (messages !== null) saveChatMessages(messages);
@@ -329,7 +329,7 @@ export default function ChatScreen() {
           text: 'Clear',
           style: 'destructive',
           onPress: () => {
-            const welcome = userPath === 'adherence' ? WELCOME_ADHERENCE : WELCOME_DEFAULT;
+            const welcome = derivedUserPath === 'adherence' ? WELCOME_ADHERENCE : WELCOME_DEFAULT;
             setMessages([{ ...welcome, timestamp: Date.now() }]);
             setDemoChips(PROMPT_CHIPS);
             setInput('');
@@ -490,8 +490,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   headerName: { fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.slate },
-  headerStatus: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.sage },
-  headerStatusDemo: { color: colors.terra },
+  headerStatus: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.sageDark },
+  headerStatusDemo: { color: colors.terraDark },
   newChatBtn: { padding: 8 },
   messages: { flex: 1 },
   messagesContent: { padding: spacing.md, gap: 10 },
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.md, padding: spacing.md, alignSelf: 'flex-start', maxWidth: '90%',
   },
-  escalationTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.terra, marginBottom: 8 },
+  escalationTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.terraDark, marginBottom: 8 },
   escalationBody: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.slateMid, lineHeight: 24, marginBottom: 12 },
   crisisBtn: {
     backgroundColor: colors.terra, borderRadius: radius.full,
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   },
   crisisBtnText: { fontFamily: fonts.bodyMedium, fontSize: textSize.bodyLarge, color: colors.white },
   crisisLinkBtn: { paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
-  crisisLink: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.terra, textAlign: 'center' },
+  crisisLink: { fontFamily: fonts.body, fontSize: textSize.bodyLarge, color: colors.terraDark, textAlign: 'center' },
   inputBarContainer: {
     backgroundColor: colors.white,
     borderTopWidth: 1,
@@ -573,6 +573,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 8,
   },
   escalatedBannerTxt: {
-    fontFamily: fonts.body, fontSize: textSize.fine, color: colors.terra, textAlign: 'center',
+    fontFamily: fonts.body, fontSize: textSize.fine, color: colors.terraDark, textAlign: 'center',
   },
 });

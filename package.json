@@ -19,6 +19,7 @@
     ],
     "moduleNameMapper": {
       "@react-native-async-storage/async-storage": "@react-native-async-storage/async-storage/jest/async-storage-mock",
+      "@expo/vector-icons": "<rootDir>/__mocks__/vectorIcons.js",
       "expo/src/winter/runtime.native": "<rootDir>/__mocks__/expoWinter.js",
       "expo/src/winter/installGlobal": "<rootDir>/__mocks__/expoWinter.js"
     },

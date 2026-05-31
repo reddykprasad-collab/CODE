@@ -18,9 +18,10 @@ import {
   Jost_600SemiBold,
 } from '@expo-google-fonts/jost';
 
+import { StatusBar } from 'expo-status-bar';
 import AppNavigator, { navigationRef } from './src/navigation';
-import { UserPathProvider } from './src/contexts/UserPathContext';
 import { OrchestrationProvider } from './src/contexts/OrchestrationContext';
+import { FontSizeProvider } from './src/contexts/FontSizeContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,13 +63,14 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <UserPathProvider>
+        <FontSizeProvider>
           <OrchestrationProvider>
             <View style={{ flex: 1 }} onLayout={onLayout}>
+              <StatusBar style="dark" />
               <AppNavigator />
             </View>
           </OrchestrationProvider>
-        </UserPathProvider>
+        </FontSizeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

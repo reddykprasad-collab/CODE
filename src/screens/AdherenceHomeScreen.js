@@ -7,8 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getStreak, confirmDose, getJournalEntries, saveJournalEntry,
+  getStreak, confirmDose, getJournalEntries,
   getTreatmentStartDate, setTreatmentStartDate, getReminderConfig,
   hasSeenCoachmark, markCoachmarkSeen, getTreatmentStatus, saveTreatmentStatus,
   getWeatherData,
@@ -20,8 +21,13 @@ import EducationInsightCard from '../components/EducationInsightCard';
 import TreatmentDateCard from '../components/TreatmentDateCard';
 import TreatmentStatusSection from '../components/TreatmentStatusSection';
 import InterventionBanner from '../components/InterventionBanner';
+import QuickLogSection from '../components/QuickLogSection';
 import { useOrchestration } from '../contexts/OrchestrationContext';
 import { EVENTS } from '../services/orchestration';
+import { LinearGradient } from 'expo-linear-gradient';
+import { getGreeting } from '../lib/dateUtils';
+import { countAcuteTreatmentDays } from '../lib/migraineUtils';
+import { gradients } from '../theme';
 
 function deriveInsight(entries) {
   if (entries.length < 3) return null;
@@ -51,6 +57,36 @@ async function cancelNotificationsOfType(type) {
   } catch {}
 }
 
+async function scheduleMonthlyDigest() {
+  try {
+    const currentMonth = `${new Date().getFullYear()}-${new Date().getMonth()}`;
+    const lastScheduledMonth = await AsyncStorage.getItem('@migraine/monthlyDigestMonth');
+    if (lastScheduledMonth === currentMonth) return;
+
+    // Cancel any previously scheduled monthly digest notifications
+    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const existing = allScheduled.filter(n => n.content.data?.type === 'monthly_digest');
+    await Promise.all(existing.map(n => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+
+    // Schedule for 1st of next month at 9:00 AM local time
+    const now = new Date();
+    const trigger = new Date(now.getFullYear(), now.getMonth() + 1, 1, 9, 0, 0);
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Migraine Companion',
+        body: `Your ${now.toLocaleString('default', { month: 'long' })} migraine summary is ready — open the app to review your patterns.`,
+        data: { type: 'monthly_digest' },
+      },
+      trigger,
+    });
+
+    await AsyncStorage.setItem('@migraine/monthlyDigestMonth', currentMonth);
+  } catch {}
+}
+
+const MILESTONES = [7, 14, 30, 60, 90];
+
 const COACH_STEPS = [
   { icon: 'check-circle', title: 'Confirm your dose here', body: 'Tap when you take your dose to build your streak.' },
   { icon: 'edit-3', title: 'Log how today went', body: 'A quick tap keeps your pattern data accurate — even "no migraine" matters.' },
@@ -66,19 +102,16 @@ export default function AdherenceHomeScreen({ navigation }) {
   const [educationInsight, setEducationInsight]     = useState(null);
   const [prediction, setPrediction]                 = useState(undefined); // undefined = loading, null = no data
   const [quickLoggedToday, setQuickLoggedToday]     = useState(false);
-  const [quickMigraine, setQuickMigraine]           = useState(null);
-  const [quickSeverity, setQuickSeverity]           = useState(5);
-  const [quickSaving, setQuickSaving]               = useState(false);
-  const [quickError, setQuickError]                 = useState(false);
   const [showCoach, setShowCoach]                   = useState(false);
   const [coachStep, setCoachStep]                   = useState(0);
   const [confirmingDose, setConfirmingDose]         = useState(false);
   const [treatmentStatus, setTreatmentStatus]       = useState({ paStatus: 'not_submitted', paExpiryDate: null, refillDate: null });
+  const [mohDays, setMohDays]                       = useState(0);
+  const [treatmentMilestone, setTreatmentMilestone] = useState(null);
 
-  const now     = new Date();
-  const hour    = now.getHours();
-  const today   = now.toDateString();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const now      = new Date();
+  const today    = now.toDateString();
+  const greeting = getGreeting();
 
   const { emitEvent } = useOrchestration();
 
@@ -97,7 +130,8 @@ export default function AdherenceHomeScreen({ navigation }) {
         const entries = await getJournalEntries();
         const todayStr = new Date().toDateString();
         setQuickLoggedToday(entries.some(e => new Date(e.date).toDateString() === todayStr));
-        setPrediction(predictMigraineRisk(entries, cachedWeather));
+        const riskResult = predictMigraineRisk(entries, cachedWeather);
+        setPrediction(riskResult);
 
         // Refresh weather in background — prediction updates when fresh data arrives
         syncWeatherData().then(result => {
@@ -120,6 +154,81 @@ export default function AdherenceHomeScreen({ navigation }) {
           ? Math.floor((Date.now() - new Date(lastEntry.date).getTime()) / 86400000)
           : 999;
         emitEvent(EVENTS.APP_OPENED, { daysSinceLast });
+
+        // MOH warning — uses the same entries already loaded above
+        const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+        const recentEntries = entries.filter(e => new Date(e.date) >= thirtyAgo);
+        setMohDays(countAcuteTreatmentDays(recentEntries));
+
+        // Treatment efficacy milestone
+        if (startDate) {
+          const daysIn = Math.floor((Date.now() - new Date(startDate)) / 864e5);
+          const milestoneWindow = [
+            { milestone: 30, lo: 25, hi: 35 },
+            { milestone: 60, lo: 55, hi: 65 },
+            { milestone: 90, lo: 85, hi: 95 },
+          ].find(w => daysIn >= w.lo && daysIn <= w.hi);
+
+          if (milestoneWindow) {
+            const txStartMs = new Date(startDate).getTime();
+
+            // afterPer30: migraine days per 30 days since treatment start
+            const afterEntries = entries.filter(e => new Date(e.date).getTime() >= txStartMs);
+            const afterMigraineDays = new Set(
+              afterEntries.filter(e => e.hadMigraine).map(e => new Date(e.date).toDateString())
+            ).size;
+            const afterPer30 = daysIn > 0 ? Math.round((afterMigraineDays / daysIn) * 30 * 10) / 10 : null;
+
+            // beforePer30: migraine days per 30 days in the 90 days before treatment start
+            const ninetyBeforeMs = txStartMs - 90 * 864e5;
+            const beforeEntries = entries.filter(e => {
+              const t = new Date(e.date).getTime();
+              return t >= ninetyBeforeMs && t < txStartMs;
+            });
+            const beforeMigraineDays = new Set(
+              beforeEntries.filter(e => e.hadMigraine).map(e => new Date(e.date).toDateString())
+            ).size;
+            const beforePer30 = beforeEntries.length > 0
+              ? Math.round((beforeMigraineDays / 90) * 30 * 10) / 10
+              : null;
+
+            if (beforePer30 !== null && afterPer30 !== null) {
+              setTreatmentMilestone({ daysIn, beforePer30, afterPer30, milestone: milestoneWindow.milestone });
+            } else {
+              setTreatmentMilestone(null);
+            }
+          } else {
+            setTreatmentMilestone(null);
+          }
+        } else {
+          setTreatmentMilestone(null);
+        }
+
+        // Prediction notification — schedule once per day for elevated/moderate risk
+        if (riskResult?.level === 'elevated' || riskResult?.level === 'moderate') {
+          try {
+            // Use local date string to match the timezone semantics used elsewhere in the file
+            const todayDateStr = new Date().toLocaleDateString('en-CA');
+            const lastNotifDate = await AsyncStorage.getItem('@migraine/lastPredictionNotif');
+            if (lastNotifDate !== todayDateStr) {
+              const now8pm = new Date();
+              now8pm.setHours(20, 0, 0, 0);
+              // Require at least 60s of headroom to avoid scheduling a trigger already in the past
+              if (now8pm.getTime() > Date.now() + 60000) {
+                const body = riskResult.level === 'elevated'
+                  ? 'Tomorrow is a high-risk day. Keep your acute medication accessible.'
+                  : 'Moderate risk tomorrow. Stay hydrated and aim for consistent sleep tonight.';
+                await Notifications.scheduleNotificationAsync({
+                  content: { title: 'Migraine Companion', body, data: { type: 'prediction_alert' } },
+                  trigger: now8pm,
+                }).catch(() => {});
+                await AsyncStorage.setItem('@migraine/lastPredictionNotif', todayDateStr);
+              }
+            }
+          } catch {}
+        }
+
+        scheduleMonthlyDigest();
       })();
     }, [])
   );
@@ -190,30 +299,6 @@ export default function AdherenceHomeScreen({ navigation }) {
     });
   }
 
-  async function handleQuickSave() {
-    if (quickMigraine === null || quickSaving) return;
-    setQuickSaving(true);
-    setQuickError(false);
-    try {
-      await saveJournalEntry({
-        id: Date.now().toString(),
-        date: new Date().toISOString(),
-        hadMigraine: quickMigraine,
-        severity: quickMigraine ? quickSeverity : null,
-        treatments: '',
-        functionalImpact: [],
-        triggers: [],
-      });
-      setQuickLoggedToday(true);
-    } catch {
-      setQuickError(true);
-    } finally {
-      setQuickSaving(false);
-    }
-  }
-
-  const MILESTONES = [7, 14, 30, 60, 90];
-
   async function handleConfirm() {
     setConfirmingDose(true);
     try {
@@ -242,36 +327,30 @@ export default function AdherenceHomeScreen({ navigation }) {
   const weekDays = useMemo(() => buildWeekStrip(), [streak, treatmentStart, reminderFrequency]);
   const confirmedCount = weekDays.filter(d => d.confirmed).length;
 
-  // MOH warning state — loaded once on mount and stored for render
-  const [mohDays, setMohDays] = useState(0);
-  useFocusEffect(useCallback(() => {
-    getJournalEntries().then(entries => {
-      const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
-      const recent = entries.filter(e => new Date(e.date) >= thirtyAgo);
-      const days = new Set();
-      recent.forEach(e => {
-        const hasActive = e.acuteTreatments?.length > 0 && !e.acuteTreatments.every(t => t === 'Nothing');
-        const hasLegacy = e.treatments && e.treatments.trim().length > 0;
-        if (hasActive || hasLegacy) days.add(new Date(e.date).toDateString());
-      });
-      setMohDays(days.size);
-    });
-  }, []));
-
   const ACTIONS = [
-    { label: 'Log today',     icon: 'edit-3',         onPress: () => navigation.navigate('Journal'),   bg: colors.sagePale,  iconColor: colors.sage,     border: colors.sageBorder },
-    { label: 'Ask companion', icon: 'message-circle',  onPress: () => navigation.navigate('Chat'),      bg: colors.lavPale,   iconColor: colors.lav,      border: colors.lavLight },
-    { label: 'My trends',     icon: 'trending-up',     onPress: () => navigation.navigate('Trends'),    bg: colors.white,     iconColor: colors.slateMid, border: colors.border },
-    { label: 'Reminders',     icon: 'bell',            onPress: () => navigation.navigate('Reminders'), bg: colors.white,     iconColor: colors.slateMid, border: colors.border },
+    { label: 'Log today',     icon: 'edit-3',         onPress: () => navigation.navigate('Journal'),      bg: colors.white, iconColor: colors.lav,      border: colors.border },
+    { label: 'Ask companion', icon: 'message-circle',  onPress: () => navigation.navigate('Chat'),         bg: colors.white, iconColor: colors.lav,      border: colors.border },
+    { label: 'Side effects',  icon: 'thermometer',     onPress: () => navigation.navigate('SideEffects'),  bg: colors.white, iconColor: colors.slateMid, border: colors.border },
+    { label: 'Reminders',     icon: 'bell',            onPress: () => navigation.navigate('Reminders'),    bg: colors.white, iconColor: colors.slateMid, border: colors.border },
   ];
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.dateLabel}>
-          {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </Text>
-        <Text style={styles.greeting}>{greeting}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.dateLabel}>
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+          <Text style={styles.greeting}>{greeting}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Settings')}
+          accessibilityRole="button"
+          accessibilityLabel="Open settings"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Feather name="settings" size={20} color={colors.slateLight} />
+        </TouchableOpacity>
       </View>
 
       <InterventionBanner
@@ -336,105 +415,36 @@ export default function AdherenceHomeScreen({ navigation }) {
                 : 'Confirm when taken to start tracking your streak.'}
             </Text>
             <TouchableOpacity
-              style={[styles.heroBtn, confirmingDose && { opacity: 0.7 }]}
+              style={confirmingDose && { opacity: 0.7 }}
               onPress={handleConfirm}
               disabled={confirmingDose}
-              activeOpacity={0.82}
+              activeOpacity={0.85}
               accessibilityRole="button"
               accessibilityLabel={confirmingDose ? 'Confirming…' : "Confirm today's dose"}
               accessibilityState={{ busy: confirmingDose }}
             >
-              {confirmingDose
-                ? <ActivityIndicator size="small" color={colors.white} />
-                : <><Feather name="check" size={15} color={colors.white} /><Text style={styles.heroBtnTxt}>Confirm dose taken</Text></>
-              }
+              <LinearGradient
+                colors={gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.heroBtn}
+              >
+                {confirmingDose
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <><Feather name="check" size={15} color="#fff" /><Text style={styles.heroBtnTxt}>Confirm dose taken</Text></>
+                }
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Quick log */}
-        {quickLoggedToday ? (
-          <TouchableOpacity
-            style={styles.quickLoggedCard}
-            onPress={() => navigation.navigate('Journal')}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Today logged. Tap to add more detail."
-          >
-            <View style={styles.quickLoggedCheck}>
-              <Feather name="check" size={13} color={colors.white} />
-            </View>
-            <Text style={styles.quickLoggedTxt}>Logged today</Text>
-            <Text style={styles.quickLoggedCta}>Add detail →</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.quickLogCard}>
-            <Text style={styles.quickLogTitle}>How was today?</Text>
-            <View style={styles.quickLogToggle}>
-              <TouchableOpacity
-                style={[styles.quickLogOpt, quickMigraine === true && styles.quickLogMigraineActive]}
-                onPress={() => setQuickMigraine(true)}
-                activeOpacity={0.85}
-                accessibilityRole="radio"
-                accessibilityLabel="Migraine today"
-                accessibilityState={{ checked: quickMigraine === true }}
-              >
-                <Text style={[styles.quickLogOptTxt, quickMigraine === true && { color: colors.terra }]}>Migraine</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickLogOpt, quickMigraine === false && styles.quickLogClearActive]}
-                onPress={() => setQuickMigraine(false)}
-                activeOpacity={0.85}
-                accessibilityRole="radio"
-                accessibilityLabel="Clear day"
-                accessibilityState={{ checked: quickMigraine === false }}
-              >
-                <Text style={[styles.quickLogOptTxt, quickMigraine === false && { color: colors.sageDark }]}>Clear day</Text>
-              </TouchableOpacity>
-            </View>
-
-            {quickMigraine && (
-              <View style={styles.quickSevWrap}>
-                <View style={styles.quickSevHeader}>
-                  <Text style={styles.quickSevLabel}>Severity</Text>
-                  <Text style={styles.quickSevRange}>1 = mild  ·  10 = severe</Text>
-                </View>
-                {[[1,2,3,4,5],[6,7,8,9,10]].map((row, ri) => (
-                  <View key={ri} style={styles.quickSevRow}>
-                    {row.map(n => (
-                      <TouchableOpacity
-                        key={n}
-                        style={[styles.quickSevBtn, quickSeverity === n && styles.quickSevBtnActive]}
-                        onPress={() => setQuickSeverity(n)}
-                        accessibilityRole="radio"
-                        accessibilityLabel={`Severity ${n}`}
-                        accessibilityState={{ checked: quickSeverity === n }}
-                      >
-                        <Text style={[styles.quickSevTxt, quickSeverity === n && styles.quickSevTxtActive]}>{n}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {quickError && (
-              <Text style={styles.quickErrorTxt}>Couldn't save. Try again or use the full Journal tab.</Text>
-            )}
-
-            <TouchableOpacity
-              style={[styles.quickSaveBtn, (quickMigraine === null || quickSaving) && { opacity: 0.35 }]}
-              onPress={handleQuickSave}
-              disabled={quickMigraine === null || quickSaving}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Save today's log"
-              accessibilityState={{ disabled: quickMigraine === null || quickSaving }}
-            >
-              <Text style={styles.quickSaveTxt}>{quickSaving ? 'Saving…' : 'Save'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        <QuickLogSection
+          isLogged={quickLoggedToday}
+          onAddDetail={() => navigation.navigate('Journal')}
+          headerText="How was today?"
+          onSaved={() => setQuickLoggedToday(true)}
+        />
 
         <View style={styles.sectionBreak}>
           <Text style={styles.sectionBreakLabel}>Your patterns</Text>
@@ -495,6 +505,42 @@ export default function AdherenceHomeScreen({ navigation }) {
           </View>
           <Text style={styles.streakHint}>Stays active even if you miss one day.</Text>
         </View>
+
+        {/* Treatment efficacy milestone */}
+        {treatmentMilestone !== null && (() => {
+          const { milestone, beforePer30, afterPer30 } = treatmentMilestone;
+          const isPositive = afterPer30 < beforePer30;
+          const reductionPct = beforePer30 > 0
+            ? Math.round((1 - afterPer30 / beforePer30) * 100)
+            : 0;
+          return (
+            <View style={[styles.milestoneCard, isPositive ? styles.milestoneCardPositive : styles.milestoneCardNeutral]}>
+              <View style={styles.milestoneTopRow}>
+                <Feather
+                  name={isPositive ? 'star' : 'clock'}
+                  size={15}
+                  color={isPositive ? colors.sageDark : colors.amber}
+                  style={{ marginTop: 1 }}
+                />
+                <Text style={[styles.milestoneTitle, isPositive ? styles.milestoneTitlePositive : styles.milestoneTitleNeutral]}>
+                  {isPositive ? `Day ${milestone} milestone` : `Day ${milestone}: Keep tracking`}
+                </Text>
+              </View>
+              {isPositive ? (
+                <>
+                  <Text style={styles.milestoneMetric}>{beforePer30} → {afterPer30} migraine days/month</Text>
+                  <Text style={styles.milestoneSubtext}>
+                    {reductionPct}% fewer migraines since starting treatment
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.milestoneSubtext}>
+                  Preventive therapy takes 3–6 months to show its full effect. Your data is building.
+                </Text>
+              )}
+            </View>
+          );
+        })()}
 
         {/* MOH warning */}
         {mohDays >= 10 && (
@@ -577,7 +623,7 @@ export default function AdherenceHomeScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel={a.label}
                 >
-                  <View style={[styles.actionIcon, { backgroundColor: a.bg === colors.white ? colors.creamMid : 'rgba(255,255,255,0.65)' }]}>
+                  <View style={[styles.actionIcon, { backgroundColor: a.bg === colors.white ? colors.creamMid : 'rgba(255,255,255,0.6)' }]}>
                     <Feather name={a.icon} size={ri === 0 ? 18 : 16} color={a.iconColor} />
                   </View>
                   <Text style={[styles.actionLbl, ri > 0 && styles.actionLblSecondary]}>{a.label}</Text>
@@ -592,7 +638,11 @@ export default function AdherenceHomeScreen({ navigation }) {
           onSave={async iso => { setTreatmentStart(iso); await setTreatmentStartDate(iso); }}
         />
 
-        <TreatmentStatusSection status={treatmentStatus} onUpdate={handleStatusUpdate} />
+        <TreatmentStatusSection
+          status={treatmentStatus}
+          onUpdate={handleStatusUpdate}
+          onNavigateToAppeal={() => navigation.navigate('AppealLetter')}
+        />
 
         <View style={{ height: 110 }} />
       </ScrollView>
@@ -604,10 +654,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
 
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
+  headerLeft: { flex: 1, marginRight: spacing.sm },
   dateLabel: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateLight, marginBottom: 5 },
   greeting: { fontFamily: fonts.display, fontSize: textSize.displayMd, color: colors.slate, lineHeight: 36 },
   scroll: { flex: 1 },
@@ -628,7 +682,7 @@ const styles = StyleSheet.create({
   heroPendingDesc: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid, lineHeight: 22, marginBottom: 20 },
   heroBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.sage, borderRadius: radius.full, paddingVertical: 15,
+    borderRadius: radius.full, paddingVertical: 15,
   },
   heroBtnTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
 
@@ -699,19 +753,19 @@ const styles = StyleSheet.create({
   predEmptyTitle: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight, marginBottom: 6 },
   predEmptyBody: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateLight, lineHeight: 22 },
   predCard: { ...shadows.sm, borderWidth: 1, borderRadius: radius.xl, padding: 18, marginBottom: 10 },
-  predCard_low:      { backgroundColor: colors.sagePale,   borderColor: colors.sageBorder },
+  predCard_low:      { backgroundColor: colors.creamMid,   borderColor: colors.border },
   predCard_moderate: { backgroundColor: colors.terraPale,  borderColor: colors.terraBorder },
   predCard_elevated: { backgroundColor: colors.terraStrong, borderColor: colors.terra },
   predTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   predEyebrow: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, letterSpacing: 0.3 },
-  predText_low:      { color: colors.sageDark },
-  predText_moderate: { color: colors.terra },
+  predText_low:      { color: colors.slateMid },
+  predText_moderate: { color: colors.terraDark },
   predText_elevated: { color: colors.terraDark },
   predBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.full,
   },
-  predBadge_low:      { backgroundColor: colors.sage },
+  predBadge_low:      { backgroundColor: colors.slateMid },
   predBadge_moderate: { backgroundColor: colors.terra },
   predBadge_elevated: { backgroundColor: colors.terraDark },
   predDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.7)' },
@@ -726,28 +780,20 @@ const styles = StyleSheet.create({
   predSkeletonEyebrow: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight, marginBottom: 6 },
   predSkeletonBody: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateLight, lineHeight: 22 },
 
-  // Quick log
-  quickLogCard: {
+  // Treatment efficacy milestone card
+  milestoneCard: {
     ...shadows.sm,
-    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.xl, padding: 18, marginBottom: 10,
+    borderWidth: 1, borderRadius: radius.lg, padding: 14, marginBottom: 10,
   },
-  quickLogTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.slate, marginBottom: 12 },
-  quickLogToggle: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-  quickLogOpt: { flex: 1, paddingVertical: 11, borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, alignItems: 'center' },
-  quickLogMigraineActive: { borderColor: colors.terra, backgroundColor: colors.terraPale },
-  quickLogClearActive: { borderColor: colors.sage, backgroundColor: colors.sagePale },
-  quickLogOptTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid },
-  quickSevWrap: { marginTop: 12, marginBottom: 4 },
-  quickSevHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  quickSevLabel: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateMid },
-  quickSevRange: { fontFamily: fonts.body, fontSize: textSize.fine, color: colors.slateLight },
-  quickSevRow: { flexDirection: 'row', gap: 6, marginBottom: 6 },
-  quickSevBtn: { flex: 1, paddingVertical: 8, borderWidth: 1.5, borderColor: colors.border, borderRadius: 9, alignItems: 'center' },
-  quickSevBtnActive: { borderColor: colors.lav, backgroundColor: colors.lavPale },
-  quickSevTxt: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid },
-  quickSevTxtActive: { fontFamily: fonts.bodyMedium, color: colors.lav },
-  quickErrorTxt: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.terra, marginTop: 8 },
+  milestoneCardPositive: { backgroundColor: colors.sagePale, borderColor: colors.sageBorder },
+  milestoneCardNeutral:  { backgroundColor: colors.creamMid, borderColor: colors.border },
+  milestoneTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginBottom: 8 },
+  milestoneTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, flex: 1 },
+  milestoneTitlePositive: { color: colors.sageDark },
+  milestoneTitleNeutral:  { color: colors.slateMid },
+  milestoneMetric: { fontFamily: fonts.bodySemiBold, fontSize: textSize.base, color: colors.slate, marginBottom: 5 },
+  milestoneSubtext: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateMid, lineHeight: 20 },
+
   mohWarning: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
@@ -755,19 +801,6 @@ const styles = StyleSheet.create({
   },
   mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
   mohBody: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateMid, lineHeight: 20 },
-  quickSaveBtn: {
-    backgroundColor: colors.lav, borderRadius: radius.full,
-    paddingVertical: 12, alignItems: 'center', marginTop: 12,
-  },
-  quickSaveTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.white },
-  quickLoggedCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.white, borderWidth: 1, borderColor: colors.sageBorder,
-    borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 10,
-  },
-  quickLoggedCheck: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.sage, alignItems: 'center', justifyContent: 'center' },
-  quickLoggedTxt: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.slate },
-  quickLoggedCta: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.lav },
 
   // Coachmark
   coachCard: {

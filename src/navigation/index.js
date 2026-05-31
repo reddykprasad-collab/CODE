@@ -7,8 +7,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { getHasOnboarded, getUserPath } from '../services/storage';
-import { useUserPath } from '../contexts/UserPathContext';
+import { getHasOnboarded } from '../services/storage';
+import { useOrchestration } from '../contexts/OrchestrationContext';
 import { colors, fonts } from '../theme';
 
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -27,6 +27,9 @@ import SignInScreen from '../screens/SignInScreen';
 import NotificationPermissionScreen from '../screens/NotificationPermissionScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import MidasScreen from '../screens/MidasScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import SideEffectsScreen from '../screens/SideEffectsScreen';
+import AppealLetterScreen from '../screens/AppealLetterScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -56,14 +59,15 @@ const TAB_SCREEN_OPTIONS = ({ route }) => ({
   headerShown: false,
   tabBarStyle: {
     backgroundColor: colors.white,
+    borderTopWidth: 1,
     borderTopColor: colors.border,
     height: 90,
     paddingTop: 8,
   },
   tabBarLabelStyle: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.slateLight,
+    fontSize: 11,
+    letterSpacing: 0.3,
   },
   tabBarActiveTintColor: colors.lav,
   tabBarInactiveTintColor: colors.slateLight,
@@ -94,22 +98,18 @@ function AdherenceTabs() {
 }
 
 function MainTabs() {
-  const { userPath } = useUserPath();
-  if (userPath === 'adherence') return <AdherenceTabs />;
+  const { derivedUserPath } = useOrchestration();
+  if (derivedUserPath === 'adherence') return <AdherenceTabs />;
   return <AwarenessTabs />;
 }
 
 export default function AppNavigator() {
-  const { userPath, setUserPathState } = useUserPath();
   const [initialRoute, setInitialRoute] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      const onboarded = await getHasOnboarded();
-      const path = await getUserPath();
-      setUserPathState(path || 'awareness');
+    getHasOnboarded().then(onboarded => {
       setInitialRoute(onboarded ? 'Main' : 'Onboarding');
-    })();
+    });
   }, []);
 
   if (!initialRoute) return null;
@@ -143,13 +143,23 @@ export default function AppNavigator() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
-          name="Trends"
-          component={TrendsScreen}
+          name="Midas"
+          component={MidasScreen}
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
-          name="Midas"
-          component={MidasScreen}
+          name="Settings"
+          component={SettingsScreen}
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="SideEffects"
+          component={SideEffectsScreen}
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="AppealLetter"
+          component={AppealLetterScreen}
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
       </Stack.Navigator>

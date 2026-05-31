@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: colors.terra, backgroundColor: colors.terraPale },
   errorText: {
-    fontFamily: fonts.body, fontSize: textSize.body, color: colors.terra,
+    fontFamily: fonts.body, fontSize: textSize.body, color: colors.terraDark,
     lineHeight: 22, marginBottom: 16, marginTop: -8,
   },
   btn: {

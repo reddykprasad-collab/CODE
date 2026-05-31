@@ -1,9 +1,10 @@
 import Constants from 'expo-constants';
 
-// SECURITY: This key lives in the app bundle and is visible to anyone who extracts
-// the APK or IPA. Before shipping to production, move all Claude API calls to a
-// server-side proxy and remove the key from the client entirely.
+// SECURITY: API_KEY lives in the app bundle. For production, set claudeProxyUrl in
+// app.config.js extra to route through a server proxy — the key is then kept
+// server-side only and API_KEY can be left empty.
 const API_KEY = Constants.expoConfig?.extra?.claudeApiKey || '';
+const PROXY_URL = Constants.expoConfig?.extra?.claudeProxyUrl || '';
 
 const SYSTEM_PROMPT = `You are a migraine companion assistant providing general health education. You are not a medical professional and cannot provide medical advice.
 
@@ -151,20 +152,22 @@ function _injectOrchestrationContext(messages, orchestrationContext) {
 }
 
 export async function sendMessage(messages, extraSystemContext = null) {
-  if (!API_KEY || API_KEY === 'your_claude_api_key_here') {
+  const usingProxy = Boolean(PROXY_URL);
+  if (!usingProxy && (!API_KEY || API_KEY === 'your_claude_api_key_here')) {
     return {
       role: 'assistant',
       content: 'The AI companion is not configured yet. Add your Claude API key to the .env file to enable chat.',
     };
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const url = usingProxy ? PROXY_URL : 'https://api.anthropic.com/v1/messages';
+  const headers = usingProxy
+    ? { 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' };
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 400,
@@ -183,7 +186,8 @@ export async function sendMessage(messages, extraSystemContext = null) {
 }
 
 export async function sendMessageStreaming(messages, extraSystemContext, orchestrationContext, onChunk) {
-  if (!API_KEY || API_KEY === 'your_claude_api_key_here') {
+  const usingProxy = Boolean(PROXY_URL);
+  if (!usingProxy && (!API_KEY || API_KEY === 'your_claude_api_key_here')) {
     const msg = 'The AI companion is not configured yet. Add your Claude API key to the .env file to enable chat.';
     onChunk(msg);
     return msg;
@@ -196,13 +200,14 @@ export async function sendMessageStreaming(messages, extraSystemContext, orchest
   const trimmed = firstUserIdx > 0 ? mapped.slice(firstUserIdx) : mapped;
   const apiMessages = _injectOrchestrationContext(trimmed, orchestrationContext);
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const url = usingProxy ? PROXY_URL : 'https://api.anthropic.com/v1/messages';
+  const headers = usingProxy
+    ? { 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' };
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
+    headers,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 400,
@@ -251,7 +256,68 @@ export async function sendMessageStreaming(messages, extraSystemContext, orchest
   return full;
 }
 
-export const isDemoMode = !API_KEY || API_KEY === 'your_claude_api_key_here';
+const APPEAL_SYSTEM_PROMPT = `You are helping a migraine patient write a prior authorization appeal letter to submit to their insurance company. Generate a professional, factual appeal letter based on the patient data provided.
+
+The letter should:
+- Be addressed "To Whom It May Concern" or "Dear Prior Authorization Review Board"
+- State the patient is appealing the denial of coverage for preventive migraine treatment
+- Include the clinical rationale based on the provided patient data (migraine frequency, disability score, treatment history)
+- Reference that preventive migraine therapy is medically necessary per established clinical guidelines (e.g., American Headache Society criteria: ≥4 migraine days/month, or significant disability)
+- Be factual, professional, and concise (300-400 words)
+- End with a request to reconsider and approve coverage
+- Include a signature line: "Sincerely, [Patient Name]"
+- Note at the bottom: "Supporting documentation: migraine diary attached"
+
+Do not include specific drug brand names. Do not mention specific insurance companies. Generate only the letter text — no commentary, no preamble.`;
+
+export async function generateAppealLetter(patientData) {
+  // patientData: { denialReason, migraineDaysPerMonth, avgSeverity, midasTotal, midasLabel, treatmentDaysIn, priorTreatments }
+  const usingProxy = Boolean(PROXY_URL);
+  if (!usingProxy && (!API_KEY || API_KEY === 'your_claude_api_key_here')) {
+    throw new Error('AI not configured');
+  }
+
+  const patientContext = [
+    `Denial reason given: ${patientData.denialReason || 'Not specified'}`,
+    patientData.migraineDaysPerMonth != null ? `Migraine frequency: approximately ${patientData.migraineDaysPerMonth} days per month` : null,
+    patientData.avgSeverity ? `Average severity: ${patientData.avgSeverity}/10` : null,
+    patientData.midasTotal != null ? `MIDAS disability score: ${patientData.midasTotal} (${patientData.midasLabel || 'moderate to severe'} disability)` : null,
+    patientData.treatmentDaysIn ? `Duration on current treatment: ${patientData.treatmentDaysIn} days` : null,
+    patientData.priorTreatments ? `Prior treatments attempted: ${patientData.priorTreatments}` : null,
+  ].filter(Boolean).join('\n');
+
+  if (usingProxy && !PROXY_URL.startsWith('https://')) {
+    throw new Error('Proxy URL must use HTTPS to protect patient data');
+  }
+
+  const url = usingProxy ? PROXY_URL : 'https://api.anthropic.com/v1/messages';
+  const headers = usingProxy
+    ? { 'Content-Type': 'application/json' }
+    : { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1200,
+      system: APPEAL_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: `Please write the appeal letter for this patient:\n\n${patientContext}` }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`API error ${response.status}: ${err}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error('Empty response from API');
+  return text;
+}
+
+export const isDemoMode = !PROXY_URL && (!API_KEY || API_KEY === 'your_claude_api_key_here');
 
 export function isEscalation(text) {
   return text.trim() === 'ESCALATION';

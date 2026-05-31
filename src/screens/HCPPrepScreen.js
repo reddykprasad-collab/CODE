@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { getJournalEntries, getHCPAnswers, saveHCPAnswers, getTreatmentStatus } from '../services/storage';
+import { daysUntilDate } from '../lib/dateUtils';
 import { colors, fonts, spacing, radius, textSize } from '../theme';
 import { sharedStyles } from '../styles/shared';
 
@@ -48,14 +49,14 @@ const STEPS = [
   },
 ];
 
-function frequencyFromJournalDays(days) {
+export function frequencyFromJournalDays(days) {
   if (days >= 15) return '15+ days per month';
   if (days >= 8) return '8–14 days per month';
   if (days >= 4) return '4–7 days per month';
   return '1–3 days per month';
 }
 
-function generateDoctorQuestions(answers, journalStats) {
+export function generateDoctorQuestions(answers, journalStats) {
   const q = [];
   const freq = answers.frequency || '';
   const highFreq = freq.includes('8–14') || freq.includes('15+');
@@ -93,11 +94,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function daysUntilDate(iso) {
-  return Math.ceil((new Date(iso).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 864e5);
-}
-
-function generateSummary(answers, journalStats, txStatus) {
+export function generateSummary(answers, journalStats, txStatus) {
   const lines = ['MIGRAINE SUMMARY\nFor my healthcare provider\n'];
 
   if (journalStats && journalStats.daysLogged > 0) {
@@ -548,6 +545,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sagePale, borderWidth: 1, borderColor: colors.sageBorder,
     borderRadius: 12, padding: 13, marginBottom: spacing.md,
   },
-  journalBadgeTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.sage, marginBottom: 4 },
+  journalBadgeTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.sageDark, marginBottom: 4 },
   journalBadgeBody: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateMid, lineHeight: 22 },
 });

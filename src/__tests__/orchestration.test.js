@@ -226,6 +226,26 @@ describe('evaluateRules — suppression map', () => {
   });
 });
 
+describe('evaluateRules — treatment-start-phase-transition', () => {
+  it('transitions journeyPhase from awareness to new_start on TREATMENT_START_SET', () => {
+    const state = makeState({ journeyPhase: 'awareness' });
+    const next = evaluateRules(state, makeEvent(EVENTS.TREATMENT_START_SET), EMPTY_STATS);
+    expect(next.journeyPhase).toBe('new_start');
+  });
+
+  it('does not fire when journeyPhase is already beyond awareness', () => {
+    const state = makeState({ journeyPhase: 'early_adherence' });
+    const next = evaluateRules(state, makeEvent(EVENTS.TREATMENT_START_SET), EMPTY_STATS);
+    expect(next.journeyPhase).toBe('early_adherence');
+  });
+
+  it('queues no interventions (transition only)', () => {
+    const state = makeState({ journeyPhase: 'awareness' });
+    const next = evaluateRules(state, makeEvent(EVENTS.TREATMENT_START_SET), EMPTY_STATS);
+    expect(next.interventionQueue).toHaveLength(0);
+  });
+});
+
 describe('evaluateRules — all rules cover EVENTS constants', () => {
   it('each rule references a valid EVENTS value', () => {
     const validEvents = new Set(Object.values(EVENTS));

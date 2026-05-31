@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { getJournalEntries, getTreatmentStartDate, getWeatherData, getMidasScores } from '../services/storage';
 import { buildCSV } from '../lib/journal';
+import { countAcuteTreatmentDays } from '../lib/migraineUtils';
 import { syncWeatherData, computeWeatherCorrelation } from '../services/weather';
 import { colors, fonts, spacing, radius, textSize, shadows } from '../theme';
 
@@ -72,7 +73,7 @@ export default function TrendsScreen({ navigation }) {
     return days;
   }, [entryMap]);
 
-  // 30-day stats
+  // Stable references required — downstream useMemos depend on these as deps.
   const thirtyAgo = useMemo(() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; }, []);
   const sixtyAgo  = useMemo(() => { const d = new Date(); d.setDate(d.getDate() - 60); return d; }, []);
 
@@ -122,16 +123,7 @@ export default function TrendsScreen({ navigation }) {
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [migraineThisMonth]);
 
-  // MOH warning: count distinct days with any acute treatment use in last 30 days
-  const mohDays = useMemo(() => {
-    const days = new Set();
-    thisMonth.forEach(e => {
-      const hasStructured = e.acuteTreatments?.length > 0 && !e.acuteTreatments.every(t => t === 'Nothing');
-      const hasLegacy = e.treatments && e.treatments.trim().length > 0;
-      if (hasStructured || hasLegacy) days.add(new Date(e.date).toDateString());
-    });
-    return days.size;
-  }, [thisMonth]);
+  const mohDays = useMemo(() => countAcuteTreatmentDays(thisMonth), [thisMonth]);
 
   // Treatment efficacy breakdown from structured logging
   const treatmentEfficacy = useMemo(() => {
@@ -147,14 +139,91 @@ export default function TrendsScreen({ navigation }) {
     return { counts, total, topTreatments: Object.entries(treatmentCounts).sort((a, b) => b[1] - a[1]).slice(0, 3) };
   }, [thisMonth]);
 
-  // Prodrome patterns
+  // Prodrome patterns — all-history, migraine-only entries
   const prodromePatterns = useMemo(() => {
+    const migraineEntries = entries.filter(e => e.hadMigraine === true);
+    const totalMigraines = migraineEntries.length;
+    if (totalMigraines === 0) return [];
     const counts = {};
-    thisMonth.forEach(e => {
+    migraineEntries.forEach(e => {
       (e.prodrome || []).forEach(p => { counts[p] = (counts[p] || 0) + 1; });
     });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [thisMonth]);
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([sign, count]) => ({ sign, count, totalMigraines }));
+  }, [entries]);
+
+  // Hormonal cycle analysis — all-history
+  const hormonalAnalysis = useMemo(() => {
+    const periodEntries = entries.filter(e => e.isPeriodDay === true);
+    if (periodEntries.length === 0) return null;
+
+    // Find period starts: first period day after a gap of ≥2 non-period days
+    const periodStarts = [];
+    let prevPeriodDate = null;
+    const periodDates = periodEntries
+      .map(e => new Date(e.date))
+      .sort((a, b) => a - b);
+
+    for (let i = 0; i < periodDates.length; i++) {
+      const d = periodDates[i];
+      if (prevPeriodDate === null) {
+        periodStarts.push(d);
+      } else {
+        const gapDays = Math.round((d - prevPeriodDate) / 864e5);
+        if (gapDays >= 2) {
+          periodStarts.push(d);
+        }
+      }
+      prevPeriodDate = d;
+    }
+
+    if (periodStarts.length < 2) return { hasData: false };
+
+    // For each period start, check if a migraine occurred within 2 days before or after
+    const migraineEntries = entries.filter(e => e.hadMigraine === true);
+    const migraineDates = migraineEntries.map(e => ({ date: new Date(e.date), severity: e.severity || 0 }));
+
+    let perimenstrualWindows = 0;
+    const perimenstrualSeverities = [];
+    const perimenstrualMigraineDates = new Set();
+
+    periodStarts.forEach(startDate => {
+      const windowStart = new Date(startDate); windowStart.setDate(windowStart.getDate() - 2);
+      const windowEnd   = new Date(startDate); windowEnd.setDate(windowEnd.getDate() + 2);
+      const migrainesInWindow = migraineDates.filter(m => m.date >= windowStart && m.date <= windowEnd);
+      if (migrainesInWindow.length > 0) {
+        perimenstrualWindows++;
+        migrainesInWindow.forEach(m => {
+          perimenstrualSeverities.push(m.severity);
+          perimenstrualMigraineDates.add(m.date.toDateString());
+        });
+      }
+    });
+
+    const perimenstrualMigraineRate = Math.round((perimenstrualWindows / periodStarts.length) * 100);
+
+    const avgSeverityPeriod = perimenstrualSeverities.length > 0
+      ? parseFloat((perimenstrualSeverities.reduce((s, v) => s + v, 0) / perimenstrualSeverities.length).toFixed(1))
+      : null;
+
+    const nonPeriodSeverities = migraineDates
+      .filter(m => !perimenstrualMigraineDates.has(m.date.toDateString()))
+      .map(m => m.severity);
+
+    const avgSeverityNonPeriod = nonPeriodSeverities.length > 0
+      ? parseFloat((nonPeriodSeverities.reduce((s, v) => s + v, 0) / nonPeriodSeverities.length).toFixed(1))
+      : null;
+
+    return {
+      hasData: true,
+      periodStartCount: periodStarts.length,
+      perimenstrualMigraineRate,
+      avgSeverityPeriod,
+      avgSeverityNonPeriod,
+    };
+  }, [entries]);
 
   // Weather correlation
   const weatherCorrelation = useMemo(() => computeWeatherCorrelation(entries, weatherData), [entries, weatherData]);
@@ -239,7 +308,7 @@ export default function TrendsScreen({ navigation }) {
                             <Text style={[
                               styles.calCellNum,
                               day.status === 'migraine' && styles.calNumWhite,
-                              day.status === 'clear' && styles.calNumWhite,
+                              day.status === 'clear' && styles.calNumClear,
                               day.isToday && day.status === 'none' && styles.calNumToday,
                               day.isToday && day.status !== 'none' && styles.calNumWhite,
                             ]}>
@@ -258,7 +327,7 @@ export default function TrendsScreen({ navigation }) {
                   <Text style={styles.calLegendTxt}>Migraine</Text>
                 </View>
                 <View style={styles.calLegendItem}>
-                  <View style={[styles.calLegendDot, { backgroundColor: colors.sage }]} />
+                  <View style={[styles.calLegendDot, { backgroundColor: colors.sagePale, borderWidth: 1.5, borderColor: colors.sageBorder }]} />
                   <Text style={styles.calLegendTxt}>Clear</Text>
                 </View>
                 <View style={styles.calLegendItem}>
@@ -267,19 +336,6 @@ export default function TrendsScreen({ navigation }) {
                 </View>
               </View>
             </View>
-
-            {/* ── Medication overuse warning ── */}
-            {mohDays >= 10 && (
-              <View style={styles.mohWarning}>
-                <Feather name="alert-triangle" size={16} color={colors.terraDark} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.mohTitle}>Medication overuse risk</Text>
-                  <Text style={styles.mohBody}>
-                    You've used acute treatments on {mohDays} days this month. Using rescue medication more than 10 days per month can lead to rebound headaches. Bring this up with your doctor.
-                  </Text>
-                </View>
-              </View>
-            )}
 
             {/* ── Key stats ── */}
             <View style={styles.statRow}>
@@ -394,6 +450,28 @@ export default function TrendsScreen({ navigation }) {
               </>
             )}
 
+            {/* ── Hormonal patterns ── */}
+            {hormonalAnalysis?.hasData && (
+              <>
+                <Text style={styles.sectionLabel}>Hormonal patterns</Text>
+                <View style={[styles.card, { borderColor: colors.lavLight, backgroundColor: colors.lavPale }]}>
+                  <Text style={styles.hormonalStat}>
+                    Migraines occurred near {hormonalAnalysis.perimenstrualMigraineRate}% of your cycles
+                  </Text>
+                  {hormonalAnalysis.avgSeverityPeriod !== null &&
+                    hormonalAnalysis.avgSeverityNonPeriod !== null &&
+                    Math.abs(hormonalAnalysis.avgSeverityPeriod - hormonalAnalysis.avgSeverityNonPeriod) > 0.3 && (
+                    <Text style={styles.hormonalSeverity}>
+                      Avg severity near cycle: {hormonalAnalysis.avgSeverityPeriod} vs {hormonalAnalysis.avgSeverityNonPeriod} on other days
+                    </Text>
+                  )}
+                  <Text style={styles.hormonalNote}>
+                    Based on {hormonalAnalysis.periodStartCount} logged cycles. Track period days in your journal to refine this.
+                  </Text>
+                </View>
+              </>
+            )}
+
             {/* ── Functional impact ── */}
             {topImpacts.length > 0 && (
               <>
@@ -401,12 +479,12 @@ export default function TrendsScreen({ navigation }) {
                 <View style={styles.card}>
                   {topImpacts.map(([impact, count], i) => (
                     <View key={impact} style={[styles.triggerRow, i === topImpacts.length - 1 && { borderBottomWidth: 0 }]}>
-                      <View style={[styles.triggerRankWrap, { backgroundColor: colors.terraPale }]}>
-                        <Text style={[styles.triggerRank, { color: colors.terraDark }]}>{i + 1}</Text>
+                      <View style={styles.triggerRankWrap}>
+                        <Text style={styles.triggerRank}>{i + 1}</Text>
                       </View>
                       <Text style={styles.triggerLabel}>{impact}</Text>
-                      <View style={[styles.triggerCountWrap, { backgroundColor: colors.lavPale }]}>
-                        <Text style={[styles.triggerCount, { color: colors.lavDark }]}>{count}×</Text>
+                      <View style={styles.triggerCountWrap}>
+                        <Text style={styles.triggerCount}>{count}×</Text>
                       </View>
                     </View>
                   ))}
@@ -476,14 +554,14 @@ export default function TrendsScreen({ navigation }) {
               <>
                 <Text style={styles.sectionLabel}>Warning signs before migraines</Text>
                 <View style={styles.card}>
-                  {prodromePatterns.map(([sign, count], i) => (
+                  {prodromePatterns.map(({ sign, count, totalMigraines }, i) => (
                     <View key={sign} style={[styles.triggerRow, i === prodromePatterns.length - 1 && { borderBottomWidth: 0 }]}>
                       <View style={[styles.triggerRankWrap, { backgroundColor: colors.creamMid }]}>
                         <Text style={[styles.triggerRank, { color: colors.slateLight }]}>{i + 1}</Text>
                       </View>
                       <Text style={styles.triggerLabel}>{sign}</Text>
                       <View style={[styles.triggerCountWrap, { backgroundColor: colors.creamMid }]}>
-                        <Text style={[styles.triggerCount, { color: colors.slateMid }]}>{count}×</Text>
+                        <Text style={[styles.triggerCount, { color: colors.slateMid }]}>{count} of {totalMigraines} migraines</Text>
                       </View>
                     </View>
                   ))}
@@ -509,9 +587,6 @@ export default function TrendsScreen({ navigation }) {
                           : '')
                       : `Analyzed ${weatherCorrelation.migraineDaysAnalyzed} migraine days. Keep logging to build a clearer picture.`}
                   </Text>
-                  {weatherCity && (
-                    <Text style={styles.weatherMeta}>Based on approximate location: {weatherCity}</Text>
-                  )}
                 </View>
               </>
             )}
@@ -525,7 +600,7 @@ export default function TrendsScreen({ navigation }) {
               accessibilityLabel="Take MIDAS check-in to measure how much migraines are affecting your daily life."
             >
               <View style={styles.midasIcon}>
-                <Feather name="activity" size={20} color={colors.terra} />
+                <Feather name="activity" size={20} color={colors.lav} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.midasTitle}>
@@ -537,7 +612,7 @@ export default function TrendsScreen({ navigation }) {
                     : '5 questions · 2 min · A clinically recognized disability scale doctors know.'}
                 </Text>
               </View>
-              <Feather name="chevron-right" size={16} color={colors.terra} />
+              <Feather name="chevron-right" size={16} color={colors.lav} />
             </TouchableOpacity>
 
             {/* ── HCP nudge ── */}
@@ -579,16 +654,8 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   body: { paddingHorizontal: spacing.md, paddingTop: 4 },
 
-  mohWarning: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
-    borderRadius: radius.md, padding: 14, marginBottom: 4,
-  },
-  mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
-  mohBody: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateMid, lineHeight: 20 },
-
   sectionLabel: {
-    fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight,
+    fontFamily: fonts.bodySemiBold, fontSize: textSize.caption, color: colors.slateLight,
     marginBottom: 12, marginTop: 20,
   },
 
@@ -606,15 +673,15 @@ const styles = StyleSheet.create({
   calCellWrap: { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   calCell: {
     width: '90%', aspectRatio: 1, borderRadius: 100,
-    backgroundColor: colors.creamMid,
     alignItems: 'center', justifyContent: 'center',
   },
   calCellMigraine: { backgroundColor: colors.terra },
-  calCellClear: { backgroundColor: colors.sage },
+  calCellClear: { backgroundColor: colors.sagePale, borderWidth: 1.5, borderColor: colors.sageBorder },
   calCellToday: { borderWidth: 2, borderColor: colors.lav },
   calCellTodayEmpty: { backgroundColor: colors.lavPale },
-  calCellNum: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.slateLight },
+  calCellNum: { fontFamily: fonts.bodyMedium, fontSize: textSize.caption, color: colors.slateLight },
   calNumWhite: { color: colors.white },
+  calNumClear: { color: colors.sageDark },
   calNumToday: { color: colors.lav, fontFamily: fonts.bodySemiBold },
   calLegend: {
     flexDirection: 'row', justifyContent: 'center', gap: 20,
@@ -650,7 +717,7 @@ const styles = StyleSheet.create({
   // Treatment comparison
   compareCard: {
     ...shadows.sm,
-    backgroundColor: colors.lavPale, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.lavLight,
+    backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12, marginBottom: 8,
   },
   compareCol: { flex: 1, alignItems: 'center', padding: 10 },
@@ -673,13 +740,13 @@ const styles = StyleSheet.create({
     padding: 16, borderWidth: 1, borderColor: colors.border,
   },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  barLabel: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.slateMid, width: 34 },
+  barLabel: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.slateMid, width: 36 },
   barTrack: {
     flex: 1, height: 10, backgroundColor: colors.creamMid,
     borderRadius: radius.full, overflow: 'hidden',
   },
   barFill: { height: '100%', backgroundColor: colors.lav, borderRadius: radius.full },
-  barCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.slateLight, width: 22, textAlign: 'right' },
+  barCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.slateLight, width: 24, textAlign: 'right' },
 
   // Triggers
   triggerRow: {
@@ -687,15 +754,15 @@ const styles = StyleSheet.create({
     paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   triggerRankWrap: {
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: colors.lavPale, alignItems: 'center', justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: colors.creamMid, alignItems: 'center', justifyContent: 'center',
   },
-  triggerRank: { fontFamily: fonts.bodyMedium, fontSize: textSize.fine, color: colors.lav },
+  triggerRank: { fontFamily: fonts.bodySemiBold, fontSize: textSize.body, color: colors.slateMid },
   triggerLabel: { flex: 1, fontFamily: fonts.body, fontSize: textSize.body, color: colors.slate },
   triggerCountWrap: {
-    backgroundColor: colors.terraStrong, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3,
+    backgroundColor: colors.creamMid, borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3,
   },
-  triggerCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.terraDark },
+  triggerCount: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.slateMid },
 
   // HCP nudge
   hcpCard: {
@@ -745,15 +812,29 @@ const styles = StyleSheet.create({
   midasCard: {
     ...shadows.sm,
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
+    backgroundColor: colors.lavPale, borderWidth: 1, borderColor: colors.lavLight,
     borderRadius: radius.xl, padding: 16, marginTop: 8,
   },
   midasIcon: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
   },
-  midasTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
+  midasTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.lav, marginBottom: 3 },
   midasDesc: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateMid, lineHeight: 18 },
+
+  // Hormonal patterns
+  hormonalStat: {
+    fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.lav,
+    marginBottom: 8,
+  },
+  hormonalSeverity: {
+    fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid,
+    marginBottom: 8, lineHeight: 20,
+  },
+  hormonalNote: {
+    fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateLight,
+    lineHeight: 18, marginTop: 4,
+  },
 
   // Empty
   emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: spacing.xl },

@@ -343,13 +343,13 @@ const styles = StyleSheet.create({
   },
   activeIconWrap: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(107,158,147,0.15)',
+    backgroundColor: colors.sagePale, borderWidth: 1, borderColor: colors.sageBorder,
     alignItems: 'center', justifyContent: 'center',
   },
-  activeTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.caption, color: colors.sage },
+  activeTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.caption, color: colors.sageDark },
   activeSub: { fontFamily: fonts.body, fontSize: textSize.label, color: colors.slateMid, marginTop: 1 },
   activeOffBtn: { paddingHorizontal: 4, paddingVertical: 4 },
-  activeOffTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.terra },
+  activeOffTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.label, color: colors.terraDark },
 
   sectionLabel: {
     fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.slateLight,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   setTimeBtn: { backgroundColor: colors.lav, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   setTimeTxt: { fontFamily: fonts.bodyMedium, fontSize: textSize.base, color: colors.white },
   clearTimeBtn: { paddingVertical: 10, alignItems: 'center', marginTop: 4 },
-  clearTimeTxt: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.terra },
+  clearTimeTxt: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.terraDark },
 
   // Preview
   previewCard: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   previewMeta: {
     fontFamily: fonts.bodySemiBold, fontSize: textSize.fine,
-    color: 'rgba(255,255,255,0.6)', marginBottom: 12,
+    color: 'rgba(255,255,255,0.5)', marginBottom: 12,
   },
   previewNotif: {
     backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   },
   previewAppName: { fontFamily: fonts.bodyMedium, fontSize: textSize.caption, color: colors.white, marginBottom: 2 },
   previewBody: { fontFamily: fonts.body, fontSize: textSize.caption, color: 'rgba(255,255,255,0.75)' },
-  previewTime: { fontFamily: fonts.body, fontSize: textSize.label, color: 'rgba(255,255,255,0.6)' },
+  previewTime: { fontFamily: fonts.body, fontSize: textSize.label, color: 'rgba(255,255,255,0.5)' },
 
   // Footer
   footer: { paddingHorizontal: spacing.lg, paddingBottom: 32, paddingTop: spacing.sm },

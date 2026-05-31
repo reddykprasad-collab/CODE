@@ -36,10 +36,10 @@ const QUESTIONS = [
 const BUCKETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 17, 21];
 
 function scoreLabel(total) {
-  if (total <= 5) return { label: 'Minimal', color: colors.sage, bg: colors.sagePale, border: colors.sageBorder };
-  if (total <= 10) return { label: 'Mild', color: '#8E7E3B', bg: '#FAF5E4', border: '#D4C886' };
-  if (total <= 20) return { label: 'Moderate', color: colors.terra, bg: colors.terraPale, border: colors.terraBorder };
-  return { label: 'Severe', color: colors.terraDark, bg: '#FDE8E0', border: colors.terraBorder };
+  if (total <= 5) return { label: 'Minimal', color: colors.sageDark, bg: colors.sagePale, border: colors.sageBorder };
+  if (total <= 10) return { label: 'Mild', color: '#FFC030', bg: '#1C1508', border: '#3D2E08' };
+  if (total <= 20) return { label: 'Moderate', color: colors.terraDark, bg: colors.terraPale, border: colors.terraBorder };
+  return { label: 'Severe', color: colors.terraDark, bg: colors.terraPale, border: colors.terraBorder };
 }
 
 function formatDate(iso) {

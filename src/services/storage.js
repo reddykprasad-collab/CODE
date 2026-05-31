@@ -27,6 +27,7 @@ const KEYS = {
   MIDAS_SCORES: '@migraine/midasScores',
   WEATHER_DATA: '@migraine/weatherData',
   ORCHESTRATION_STATE: '@migraine/orchestrationState',
+  SIDE_EFFECTS: '@migraine/sideEffects',
 };
 
 export const DEFAULT_ORCHESTRATION_STATE = {
@@ -232,6 +233,22 @@ const VALID_INTERVENTION_TYPES = new Set([
   'positive_reinforcement', 'hcp_prep_prompt', 'expectation_reset',
   'diary_prompt', 'first_dose_coaching', 'refill_nudge', 'guidance_unavailable',
 ]);
+
+export async function getSideEffects() {
+  const raw = await AsyncStorage.getItem(KEYS.SIDE_EFFECTS);
+  return safeParse(raw, []);
+}
+
+export async function saveSideEffect(entry) {
+  // entry shape: { id, date, symptoms: string[], note: string }
+  const existing = await getSideEffects();
+  const dayStr = new Date(entry.date).toDateString();
+  // One entry per day, same as journal
+  const filtered = existing.filter(e => new Date(e.date).toDateString() !== dayStr);
+  const updated = [entry, ...filtered].slice(0, 365);
+  await AsyncStorage.setItem(KEYS.SIDE_EFFECTS, JSON.stringify(updated));
+  return updated;
+}
 
 export async function saveOrchestrationState(state) {
   // Enforce max queue depth and type allowlist

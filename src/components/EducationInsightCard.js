@@ -39,9 +39,9 @@ export default function EducationInsightCard({ insight, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.lavPale,
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: colors.lavLight,
+    borderColor: colors.border,
     borderRadius: radius.xl,
     padding: 20,
     marginBottom: 10,
