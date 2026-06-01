@@ -80,6 +80,24 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
 
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { fontSize: fs(textSize.caption) }]}>MY HEALTH RECORDS</Text>
+          <View style={[styles.card, shadows.sm]}>
+            <TouchableOpacity
+              style={styles.navRow}
+              onPress={() => navigation.navigate('MedicationHistory')}
+              accessibilityRole="button"
+              accessibilityLabel="View medication history"
+            >
+              <View style={styles.navRowLeft}>
+                <Feather name="list" size={16} color={colors.lav} />
+                <Text style={styles.navRowLabel}>My medication history</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={colors.slateLight} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -168,5 +186,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     color: colors.slateMid,
     lineHeight: 22,
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+  },
+  navRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  navRowLabel: {
+    fontFamily: fonts.body,
+    fontSize: textSize.body,
+    color: colors.slate,
   },
 });

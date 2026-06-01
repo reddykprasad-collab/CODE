@@ -28,6 +28,7 @@ const KEYS = {
   WEATHER_DATA: '@migraine/weatherData',
   ORCHESTRATION_STATE: '@migraine/orchestrationState',
   SIDE_EFFECTS: '@migraine/sideEffects',
+  MEDICATION_HISTORY: '@migraine/medicationHistory',
 };
 
 export const DEFAULT_ORCHESTRATION_STATE = {
@@ -247,6 +248,27 @@ export async function saveSideEffect(entry) {
   const filtered = existing.filter(e => new Date(e.date).toDateString() !== dayStr);
   const updated = [entry, ...filtered].slice(0, 365);
   await AsyncStorage.setItem(KEYS.SIDE_EFFECTS, JSON.stringify(updated));
+  return updated;
+}
+
+export async function getMedicationHistory() {
+  const raw = await AsyncStorage.getItem(KEYS.MEDICATION_HISTORY);
+  return safeParse(raw, []);
+}
+
+export async function saveMedicationEntry(entry) {
+  // entry shape: { id, name, startDate, endDate, reason, notes }
+  const existing = await getMedicationHistory();
+  const filtered = existing.filter(e => e.id !== entry.id);
+  const updated = [entry, ...filtered];
+  await AsyncStorage.setItem(KEYS.MEDICATION_HISTORY, JSON.stringify(updated));
+  return updated;
+}
+
+export async function deleteMedicationEntry(id) {
+  const existing = await getMedicationHistory();
+  const updated = existing.filter(e => e.id !== id);
+  await AsyncStorage.setItem(KEYS.MEDICATION_HISTORY, JSON.stringify(updated));
   return updated;
 }
 

@@ -30,6 +30,7 @@ import MidasScreen from '../screens/MidasScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import SideEffectsScreen from '../screens/SideEffectsScreen';
 import AppealLetterScreen from '../screens/AppealLetterScreen';
+import MedicationHistoryScreen from '../screens/MedicationHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -160,6 +161,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="AppealLetter"
           component={AppealLetterScreen}
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="MedicationHistory"
+          component={MedicationHistoryScreen}
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
       </Stack.Navigator>

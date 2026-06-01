@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { getMidasScores, saveMidasScore } from '../services/storage';
+import { getMidasScores, saveMidasScore, getJournalEntries } from '../services/storage';
 import { colors, fonts, spacing, radius, textSize } from '../theme';
 import { sharedStyles } from '../styles/shared';
 import { useOrchestration } from '../contexts/OrchestrationContext';
@@ -53,9 +53,32 @@ export default function MidasScreen({ navigation }) {
   const [done, setDone] = useState(false);
   const [history, setHistory] = useState([]);
   const [view, setView] = useState('quiz');
+  const [fromDiary, setFromDiary] = useState(false);
 
   useEffect(() => {
-    getMidasScores().then(setHistory);
+    Promise.all([getMidasScores(), getJournalEntries()]).then(([scores, entries]) => {
+      setHistory(scores);
+      // Only pre-populate if no answers yet
+      const ninetyAgo = new Date();
+      ninetyAgo.setDate(ninetyAgo.getDate() - 90);
+      const recent = entries.filter(e => e.hadMigraine && new Date(e.date) >= ninetyAgo);
+      if (recent.length < 3) return; // not enough data
+
+      const cap = (n) => Math.min(n, 90);
+      const has = (e, ...impacts) => (e.functionalImpact || []).some(i => impacts.includes(i));
+
+      const q1 = cap(recent.filter(e => has(e, 'Stayed home', 'Missed activities')).length);
+      const q2 = cap(recent.filter(e => has(e, 'Worked through it')).length);
+      const q3 = cap(recent.filter(e => has(e, 'Stayed home')).length);
+      const q4 = cap(recent.filter(e => has(e, 'Missed activities')).length);
+      const q5 = cap(recent.filter(e => has(e, 'Missed activities', 'Cancel social plans')).length);
+
+      // Only pre-populate if at least one question has a non-zero estimate
+      if (q1 + q2 + q3 + q4 + q5 > 0) {
+        setAnswers({ q1, q2, q3, q4, q5 });
+        setFromDiary(true);
+      }
+    });
   }, []);
 
   const q = QUESTIONS[step];
@@ -160,6 +183,22 @@ export default function MidasScreen({ navigation }) {
             <Text style={styles.resultSub}>MIDAS score based on your last 3 months</Text>
           </View>
 
+          {history.length >= 2 && (() => {
+            const prev = history[1].total ?? history[1].score;
+            const delta = total - prev;
+            if (delta === 0) return null;
+            const improved = delta < 0;
+            return (
+              <View style={[styles.deltaCard, improved ? styles.deltaCardGood : styles.deltaCardWorse]}>
+                <Text style={[styles.deltaTxt, improved ? styles.deltaTxtGood : styles.deltaTxtWorse]}>
+                  {improved
+                    ? `Your score dropped by ${Math.abs(delta)} points since last time — that's a meaningful improvement.`
+                    : `Your score increased by ${delta} points since last time. Worth discussing with your doctor at your next visit.`}
+                </Text>
+              </View>
+            );
+          })()}
+
           <View style={styles.explanationCard}>
             <Text style={styles.explanationTitle}>What this means</Text>
             <Text style={styles.explanationBody}>
@@ -258,6 +297,13 @@ export default function MidasScreen({ navigation }) {
         <Text style={styles.question}>{q.text}</Text>
         <Text style={styles.questionNote}>Enter 0 if none.</Text>
 
+        {fromDiary && (
+          <View style={styles.diaryBanner}>
+            <Feather name="info" size={13} color={colors.lav} />
+            <Text style={styles.diaryBannerTxt}>Estimated from your journal — adjust if needed.</Text>
+          </View>
+        )}
+
         <View style={styles.bucketGrid}>
           {BUCKETS.map(val => (
             <TouchableOpacity
@@ -316,7 +362,19 @@ const styles = StyleSheet.create({
   body: { padding: spacing.lg, paddingBottom: 120 },
   eyebrow: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.lav, marginBottom: 12 },
   question: { fontFamily: fonts.display, fontSize: 26, lineHeight: 36, color: colors.slate, marginBottom: 6 },
-  questionNote: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateLight, marginBottom: spacing.lg },
+  questionNote: { fontFamily: fonts.body, fontSize: textSize.base, color: colors.slateLight, marginBottom: spacing.sm },
+  diaryBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.lavPale, borderWidth: 1, borderColor: colors.lavLight,
+    borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8, marginBottom: spacing.md,
+  },
+  diaryBannerTxt: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.lav, flex: 1 },
+  deltaCard: { borderWidth: 1, borderRadius: radius.lg, padding: 14, marginBottom: 12 },
+  deltaCardGood: { backgroundColor: colors.sagePale, borderColor: colors.sageBorder },
+  deltaCardWorse: { backgroundColor: colors.terraPale, borderColor: colors.terraBorder },
+  deltaTxt: { fontFamily: fonts.body, fontSize: textSize.body, lineHeight: 22 },
+  deltaTxtGood: { color: colors.sageDark },
+  deltaTxtWorse: { color: colors.terraDark },
   bucketGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   bucket: {
     width: 52, height: 52, borderRadius: radius.sm, borderWidth: 1.5, borderColor: colors.border,

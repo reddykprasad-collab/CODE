@@ -26,7 +26,7 @@ import { useOrchestration } from '../contexts/OrchestrationContext';
 import { EVENTS } from '../services/orchestration';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getGreeting } from '../lib/dateUtils';
-import { countAcuteTreatmentDays } from '../lib/migraineUtils';
+import { countAcuteTreatmentDays, computeMOHStatus } from '../lib/migraineUtils';
 import { gradients } from '../theme';
 
 function deriveInsight(entries) {
@@ -107,6 +107,7 @@ export default function AdherenceHomeScreen({ navigation }) {
   const [confirmingDose, setConfirmingDose]         = useState(false);
   const [treatmentStatus, setTreatmentStatus]       = useState({ paStatus: 'not_submitted', paExpiryDate: null, refillDate: null });
   const [mohDays, setMohDays]                       = useState(0);
+  const [mohStatus, setMohStatus]                   = useState(null);
   const [treatmentMilestone, setTreatmentMilestone] = useState(null);
 
   const now      = new Date();
@@ -158,7 +159,9 @@ export default function AdherenceHomeScreen({ navigation }) {
         // MOH warning — uses the same entries already loaded above
         const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
         const recentEntries = entries.filter(e => new Date(e.date) >= thirtyAgo);
-        setMohDays(countAcuteTreatmentDays(recentEntries));
+        const mohStatus = computeMOHStatus(recentEntries);
+        setMohDays(mohStatus.primaryDays); // keep existing mohDays state for backward compat
+        setMohStatus(mohStatus);
 
         // Treatment efficacy milestone
         if (startDate) {
@@ -508,7 +511,7 @@ export default function AdherenceHomeScreen({ navigation }) {
 
         {/* Treatment efficacy milestone */}
         {treatmentMilestone !== null && (() => {
-          const { milestone, beforePer30, afterPer30 } = treatmentMilestone;
+          const { milestone, beforePer30, afterPer30, daysIn } = treatmentMilestone;
           const isPositive = afterPer30 < beforePer30;
           const reductionPct = beforePer30 > 0
             ? Math.round((1 - afterPer30 / beforePer30) * 100)
@@ -523,32 +526,77 @@ export default function AdherenceHomeScreen({ navigation }) {
                   style={{ marginTop: 1 }}
                 />
                 <Text style={[styles.milestoneTitle, isPositive ? styles.milestoneTitlePositive : styles.milestoneTitleNeutral]}>
-                  {isPositive ? `Day ${milestone} milestone` : `Day ${milestone}: Keep tracking`}
+                  {isPositive ? `Day ${milestone}: you're making progress` : `Day ${milestone}: building your baseline`}
                 </Text>
               </View>
               {isPositive ? (
                 <>
-                  <Text style={styles.milestoneMetric}>{beforePer30} → {afterPer30} migraine days/month</Text>
+                  <Text style={styles.milestoneMetric}>From {beforePer30} to {afterPer30} migraine days a month</Text>
                   <Text style={styles.milestoneSubtext}>
-                    {reductionPct}% fewer migraines since starting treatment
+                    That's {reductionPct}% fewer since you started. Keep going.
                   </Text>
+                  {daysIn <= 180 && (
+                    <Text style={styles.milestoneKeepGoing}>
+                      The most common mistake at this stage is stopping when things improve. The improvement IS the treatment working.
+                    </Text>
+                  )}
                 </>
               ) : (
                 <Text style={styles.milestoneSubtext}>
-                  Preventive therapy takes 3–6 months to show its full effect. Your data is building.
+                  Most people don't see the full effect until months 3–6. Your data is growing — and so is the evidence your doctor needs.
                 </Text>
               )}
             </View>
           );
         })()}
 
+        {/* Treatment phase / responder trajectory */}
+        {treatmentStart && (() => {
+          const daysIn = Math.floor((Date.now() - new Date(treatmentStart)) / 864e5);
+          if (daysIn <= 0 || daysIn > 365) return null;
+          let phaseMsg;
+          if (daysIn <= 60) {
+            phaseMsg = "The first 3 months are about building the foundation. Most people don't feel the full effect yet — that's normal.";
+          } else if (daysIn <= 180) {
+            phaseMsg = "You're in the window where most people start noticing real change. Staying consistent now matters more than ever.";
+          } else {
+            phaseMsg = `You're ${Math.floor(daysIn / 30)} months in. The data you've built is valuable — bring it to your next appointment.`;
+          }
+          return (
+            <View style={styles.phaseCard}>
+              <View style={styles.phaseTopRow}>
+                <Text style={styles.phaseLabel}>Month {Math.ceil(daysIn / 30)} of your treatment</Text>
+                <View style={styles.phasePill}>
+                  <Text style={styles.phasePillTxt}>{daysIn} days in</Text>
+                </View>
+              </View>
+              <Text style={styles.phaseMsg}>{phaseMsg}</Text>
+            </View>
+          );
+        })()}
+
         {/* MOH warning */}
-        {mohDays >= 10 && (
-          <View style={styles.mohWarning}>
-            <Feather name="alert-triangle" size={15} color={colors.terraDark} />
+        {mohStatus && mohStatus.mohRisk !== 'none' && (
+          <View style={[
+            styles.mohWarning,
+            mohStatus.mohRisk === 'approaching' && styles.mohWarningApproaching,
+          ]}>
+            <Feather
+              name={mohStatus.mohRisk === 'exceeded' ? 'alert-triangle' : 'alert-circle'}
+              size={15}
+              color={mohStatus.mohRisk === 'exceeded' ? colors.terraDark : colors.amber}
+            />
             <View style={{ flex: 1 }}>
-              <Text style={styles.mohTitle}>Rescue medication: {mohDays} days this month</Text>
-              <Text style={styles.mohBody}>Using acute treatments on more than 10 days per month can cause rebound headaches. Mention this at your next appointment.</Text>
+              <Text style={styles.mohTitle}>
+                {mohStatus.mohRisk === 'exceeded'
+                  ? `Rescue medication: ${mohStatus.primaryDays} days this month`
+                  : `Heads up: ${mohStatus.primaryDays} of ${mohStatus.primaryThreshold} rescue days used`}
+              </Text>
+              <Text style={styles.mohBody}>
+                {mohStatus.mohRisk === 'exceeded'
+                  ? `Using ${mohStatus.primaryClass === 'triptan' ? 'triptans' : 'pain relievers'} more than ${mohStatus.primaryThreshold} days a month can gradually make headaches more frequent. Mention this at your next appointment.`
+                  : `Most people find headaches get harder to control after ${mohStatus.primaryThreshold} days a month. You have ${mohStatus.primaryThreshold - mohStatus.primaryDays} days left this month.`}
+              </Text>
             </View>
           </View>
         )}
@@ -793,12 +841,24 @@ const styles = StyleSheet.create({
   milestoneTitleNeutral:  { color: colors.slateMid },
   milestoneMetric: { fontFamily: fonts.bodySemiBold, fontSize: textSize.base, color: colors.slate, marginBottom: 5 },
   milestoneSubtext: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateMid, lineHeight: 20 },
+  milestoneKeepGoing: { fontFamily: fonts.body, fontSize: textSize.fine, color: colors.sageDark, lineHeight: 18, marginTop: 8, fontStyle: 'italic' },
+
+  phaseCard: {
+    backgroundColor: colors.lavPale, borderWidth: 1, borderColor: colors.lavLight,
+    borderRadius: radius.xl, padding: spacing.lg, marginBottom: 10,
+  },
+  phaseTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  phaseLabel: { fontFamily: fonts.bodySemiBold, fontSize: textSize.label, color: colors.lav },
+  phasePill: { backgroundColor: colors.white, borderWidth: 1, borderColor: colors.lavLight, borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+  phasePillTxt: { fontFamily: fonts.body, fontSize: textSize.fine, color: colors.lav },
+  phaseMsg: { fontFamily: fonts.body, fontSize: textSize.body, color: colors.slateMid, lineHeight: 22 },
 
   mohWarning: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: colors.terraPale, borderWidth: 1, borderColor: colors.terraBorder,
     borderRadius: radius.md, padding: 14, marginBottom: 10,
   },
+  mohWarningApproaching: { backgroundColor: '#1C1508', borderColor: '#3D2E08' },
   mohTitle: { fontFamily: fonts.bodyMedium, fontSize: textSize.body, color: colors.terraDark, marginBottom: 3 },
   mohBody: { fontFamily: fonts.body, fontSize: textSize.caption, color: colors.slateMid, lineHeight: 20 },
 
